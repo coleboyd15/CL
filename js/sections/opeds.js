@@ -109,9 +109,12 @@
                       const disliked = !!prefs.dislikes[a.id];
                       const tags = (a.tags || []).join(", ");
                       const date = formatDate(a.published);
+                      const safeUrl = CL.escapeHtml(a.url || "#");
                       return `
                 <article class="card" data-id="${CL.escapeHtml(a.id)}">
-                  <div class="card-title">${CL.escapeHtml(a.title)}</div>
+                  <div class="card-title">
+                    <a class="oped-title-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${CL.escapeHtml(a.title)}</a>
+                  </div>
                   <div class="card-meta">
                     ${CL.escapeHtml(a.source)}${a.author ? " · " + CL.escapeHtml(a.author) : ""}${
                       date ? " · " + CL.escapeHtml(date) : ""
@@ -124,7 +127,7 @@
                       : ""
                   }
                   <div class="card-actions">
-                    <a class="btn btn-secondary btn-sm" href="${CL.escapeHtml(a.url)}" target="_blank" rel="noopener">Open</a>
+                    <a class="btn btn-secondary btn-sm" href="${safeUrl}" target="_blank" rel="noopener noreferrer">Read article ↗</a>
                     <button type="button" class="btn btn-sm ${liked ? "btn-primary" : "btn-ghost"} btn-like">👍 Like</button>
                     <button type="button" class="btn btn-sm ${disliked ? "btn-primary" : "btn-ghost"} btn-dislike">👎 Pass</button>
                   </div>

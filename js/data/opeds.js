@@ -7,126 +7,183 @@
     return d.toISOString().slice(0, 10);
   }
 
+  /** Real opinion pieces with working article URLs (major outlets). */
   const fallbackOpeds = [
     {
       id: "fb-nyt-1",
-      title: "The Quiet Power of Doing Nothing Together",
+      title: "America Makes a Perilous Choice",
       source: "The New York Times",
-      author: "Opinion",
-      url: "https://www.nytimes.com/section/opinion",
-      published: todayOffset(0),
-      summary: "Why unstructured time — not another booked experience — might be the best date night.",
-      tags: ["relationships", "culture", "wellbeing"]
+      author: "The Editorial Board",
+      url: "https://www.nytimes.com/2024/11/06/opinion/trump-wins.html",
+      published: "2024-11-06",
+      summary:
+        "The Times editorial board on the 2024 election outcome and what it means for American democracy.",
+      tags: ["politics", "culture"]
     },
     {
       id: "fb-nyt-2",
-      title: "Cities That Still Belong to Pedestrians",
+      title: "To Serve His Country, President Biden Should Leave the Race",
       source: "The New York Times",
-      author: "Opinion",
-      url: "https://www.nytimes.com/section/opinion",
-      published: todayOffset(1),
-      summary: "Walkable neighborhoods, slow streets, and the romance of getting nowhere fast.",
-      tags: ["cities", "lifestyle", "travel"]
+      author: "The Editorial Board",
+      url: "https://www.nytimes.com/2024/06/28/opinion/biden-election-debate-trump.html",
+      published: "2024-06-28",
+      summary:
+        "A landmark editorial arguing that President Biden should step aside after the first 2024 debate.",
+      tags: ["politics", "culture"]
+    },
+    {
+      id: "fb-nyt-3",
+      title: "A Reporter’s Shield Law Is Vital to Prevent Abuses of Power",
+      source: "The New York Times",
+      author: "The Editorial Board",
+      url: "https://www.nytimes.com/2024/10/14/opinion/editorials/press-act-reporters-leaks-whistleblower.html",
+      published: "2024-10-14",
+      summary:
+        "Why federal protections for journalists and whistleblowers still matter in a free press.",
+      tags: ["politics", "tech", "culture"]
     },
     {
       id: "fb-wapo-1",
-      title: "Put the Phone Away. The Conversation Can Wait — and So Can the Timeline.",
+      title: "We are losing our humanity. I am searching for an antidote.",
       source: "The Washington Post",
-      author: "Opinions",
-      url: "https://www.washingtonpost.com/opinions/",
-      published: todayOffset(0),
-      summary: "A case for offline evenings in a culture that rewards constant availability.",
-      tags: ["tech", "wellbeing", "relationships"]
+      author: "Dana Milbank",
+      url: "https://www.washingtonpost.com/opinions/2025/07/25/dana-milbank-new-column-futures/",
+      published: "2025-07-25",
+      summary:
+        "Milbank on recovering connection to nature and community — “the tonic of wildness” as a response to modern life.",
+      tags: ["wellbeing", "lifestyle", "culture"]
     },
     {
       id: "fb-wapo-2",
-      title: "What Restaurants Get Wrong About Romance",
+      title: "How Trump dominates and corrupts the private sector",
       source: "The Washington Post",
       author: "Opinions",
-      url: "https://www.washingtonpost.com/opinions/",
-      published: todayOffset(2),
-      summary: "Dim lights are not a personality. Hospitality, pace, and noise levels matter more.",
-      tags: ["food", "relationships", "culture"]
+      url: "https://www.washingtonpost.com/opinions/2025/07/18/president-trump-executive-power/",
+      published: "2025-07-18",
+      summary:
+        "An argument about executive power, business, and how politics reshapes private industry.",
+      tags: ["politics", "lifestyle"]
     },
     {
       id: "fb-atlantic-1",
-      title: "The Case for Reading Out Loud Again",
+      title: "The Friendship Paradox",
       source: "The Atlantic",
-      author: "Culture",
-      url: "https://www.theatlantic.com/ideas/",
-      published: todayOffset(1),
-      summary: "Couples who share pages rebuild attention spans — and a shared vocabulary.",
-      tags: ["books", "culture", "relationships"]
+      author: "Olga Khazan",
+      url: "https://www.theatlantic.com/ideas/archive/2024/09/loneliness-epidemic-friendship-shortage/679689/",
+      published: "2024-09-04",
+      summary:
+        "We all want more time with friends — so why are we spending more time alone? A look at modern loneliness.",
+      tags: ["relationships", "wellbeing", "lifestyle"]
     },
     {
       id: "fb-atlantic-2",
-      title: "Travel Without a Bucket List",
+      title: "Confessions of a Republican Exile",
       source: "The Atlantic",
-      author: "Ideas",
-      url: "https://www.theatlantic.com/ideas/",
-      published: todayOffset(3),
-      summary: "Optimization culture ruined vacations. Aimlessness might save them.",
-      tags: ["travel", "mindfulness", "lifestyle"]
+      author: "David Brooks",
+      url: "https://www.theatlantic.com/ideas/archive/2024/10/trumpism-republican-party-exile-david-brooks/680243/",
+      published: "2024-10-12",
+      summary:
+        "Brooks on political alienation, Trumpism, and life on the moderate edge of the Democratic Party.",
+      tags: ["politics", "culture"]
+    },
+    {
+      id: "fb-atlantic-3",
+      title: "The Awfulness of Elite Hypocrisy on Marriage",
+      source: "The Atlantic",
+      author: "Brad Wilcox",
+      url: "https://www.theatlantic.com/ideas/archive/2024/02/elitism-marriage-rates-hypocrisy/677401/",
+      published: "2024-02-13",
+      summary:
+        "Why the most privileged Americans still marry — even as they avoid saying one family form is better.",
+      tags: ["relationships", "culture", "lifestyle"]
+    },
+    {
+      id: "fb-wsj-1",
+      title: "What Do Mainstream Democrats Stand For?",
+      source: "The Wall Street Journal",
+      author: "WSJ Opinion",
+      url: "https://www.wsj.com/opinion/what-do-mainstream-democrats-stand-for-a6835d6e",
+      published: "2025-11-13",
+      summary:
+        "A WSJ Opinion piece probing Democratic messaging, leadership, and political identity.",
+      tags: ["politics", "culture"]
+    },
+    {
+      id: "fb-wsj-2",
+      title: "The Socialist Temptation of Sam Altman",
+      source: "The Wall Street Journal",
+      author: "The Editorial Board",
+      url: "https://www.wsj.com/opinion/openai-government-sam-altman-donald-trump-ai-5b2676a2",
+      published: todayOffset(2),
+      summary:
+        "Editorial on OpenAI, government power, and the stakes of AI policy for tech and markets.",
+      tags: ["tech", "politics", "culture"]
+    },
+    {
+      id: "fb-wsj-3",
+      title: "How the Smithsonian Lost America’s Plot",
+      source: "The Wall Street Journal",
+      author: "The Editorial Board",
+      url: "https://www.wsj.com/opinion/how-the-smithsonian-lost-americas-plot-622709db",
+      published: todayOffset(1),
+      summary:
+        "The Journal’s critique of how the National Museum of American History frames the U.S. story.",
+      tags: ["culture", "politics"]
     },
     {
       id: "fb-guardian-1",
-      title: "Why Slow Dates Still Matter",
+      title: "In 2024: which way forward?",
       source: "The Guardian",
-      author: "Opinion",
-      url: "https://www.theguardian.com/us/commentisfree",
-      published: todayOffset(0),
-      summary: "Against the efficiency cult of dating apps and 45-minute coffee auditions.",
-      tags: ["relationships", "culture"]
+      author: "Bernie Sanders",
+      url: "https://www.theguardian.com/commentisfree/2024/jan/08/bernie-sanders-democracy-biden-trump",
+      published: "2024-01-08",
+      summary:
+        "Bernie Sanders on progressive strategy, democracy, and the stakes of U.S. politics in 2024.",
+      tags: ["politics", "culture"]
     },
     {
       id: "fb-guardian-2",
-      title: "Screens Off, Stars On",
+      title: "The tragic change a single year has made in America",
       source: "The Guardian",
-      author: "Opinion",
-      url: "https://www.theguardian.com/uk/commentisfree",
-      published: todayOffset(2),
-      summary: "Night walks, no podcasts, and the underrated thrill of looking up.",
-      tags: ["tech", "wellbeing", "lifestyle"]
+      author: "Margaret Sullivan",
+      url: "https://www.theguardian.com/commentisfree/2025/oct/26/america-tragic-change-2024-election",
+      published: "2025-10-26",
+      summary:
+        "Sullivan on the first year after the 2024 election — and why hope still matters.",
+      tags: ["politics", "culture"]
     },
     {
-      id: "fb-newyorker-1",
-      title: "The Dinner Table as Public Square",
-      source: "The New Yorker",
-      author: "Culture",
-      url: "https://www.newyorker.com/culture",
-      published: todayOffset(4),
-      summary: "How home cooking became politics, identity, and intimacy all at once.",
-      tags: ["food", "culture", "relationships"]
+      id: "fb-guardian-3",
+      title: "The Guardian view on America’s electoral college: time to scrap an antidemocratic relic",
+      source: "The Guardian",
+      author: "Editorial",
+      url: "https://www.theguardian.com/commentisfree/2024/nov/04/the-guardian-view-on-americas-electoral-college-time-to-scrap-an-antidemocratic-relic",
+      published: "2024-11-04",
+      summary:
+        "Why the Guardian’s editors argue the Electoral College undermines democratic legitimacy.",
+      tags: ["politics", "culture"]
     },
     {
       id: "fb-latimes-1",
-      title: "California’s Love Affair With the Long Walk",
+      title: "What did the Asian American vote this year tell us?",
       source: "Los Angeles Times",
-      author: "Opinion",
-      url: "https://www.latimes.com/opinion",
-      published: todayOffset(1),
-      summary: "Coastal paths, heat, and why couples still measure love in miles.",
-      tags: ["cities", "lifestyle", "travel"]
+      author: "James Zarsadiaz",
+      url: "https://www.latimes.com/opinion/story/2024-11-10/election-2024-asian-american-voters",
+      published: "2024-11-10",
+      summary:
+        "How Asian American voters shifted in 2024 — and what that means for both parties going forward.",
+      tags: ["politics", "culture"]
     },
     {
-      id: "fb-time-1",
-      title: "Affordable Joy Is a Skill",
-      source: "TIME",
-      author: "Ideas",
-      url: "https://time.com/section/ideas/",
-      published: todayOffset(3),
-      summary: "Budget dates aren’t a downgrade — they’re a creativity test.",
-      tags: ["lifestyle", "relationships", "culture"]
-    },
-    {
-      id: "fb-vulture-1",
-      title: "Stop Letting Algorithms Pick the Movie",
-      source: "Vulture",
-      author: "Culture",
-      url: "https://www.vulture.com/",
-      published: todayOffset(2),
-      summary: "Decision paralysis killed date-night cinema. Here’s how to reclaim it.",
-      tags: ["culture", "lifestyle", "tech"]
+      id: "fb-newyorker-1",
+      title: "Kamala Harris, the Candidate",
+      source: "The New Yorker",
+      author: "Cultural Comment",
+      url: "https://www.newyorker.com/culture/cultural-comment/kamala-harris-the-candidate",
+      published: "2024-07-23",
+      summary:
+        "A New Yorker cultural comment on Harris as she moved to the center of the 2024 Democratic ticket.",
+      tags: ["politics", "culture"]
     }
   ];
 
