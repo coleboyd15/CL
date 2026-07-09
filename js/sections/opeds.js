@@ -53,7 +53,10 @@
       loading = true;
       paint();
       try {
-        if (force) CL.storage.remove("opedsCache");
+        if (force) {
+          CL.storage.remove("opedsCache");
+          CL.storage.remove("opedsCache_v3");
+        }
         const result = await CL.opedsApi.fetchLiveOpeds();
         meta = {
           source: result.source,
