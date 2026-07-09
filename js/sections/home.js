@@ -102,7 +102,7 @@
               <a href="#opeds" class="quick-card">
                 <span class="emoji">📰</span>
                 <strong>OpEds</strong>
-                <span>Read & rate</span>
+                <span>Live opinion picks</span>
               </a>
               <a href="#profile" class="quick-card">
                 <span class="emoji">💕</span>
@@ -117,7 +117,7 @@
             <div class="stack-sm">
               <button type="button" class="card home-action" data-go="food">
                 <strong>Where should we eat?</strong>
-                <p class="card-meta">Open Food · use location · ask Grok</p>
+                <p class="card-meta">Open Food · GPS + OpenStreetMap · ask Grok</p>
               </button>
               <button type="button" class="card home-action" data-go="movies">
                 <strong>Movie night?</strong>

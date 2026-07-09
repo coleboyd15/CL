@@ -1,4 +1,5 @@
-/* Mock food / drink / dessert venues — offsets in km from user GPS */
+/* Fallback food/drink venues — used when GPS is off or OSM is empty/unavailable.
+   Offsets (northKm/eastKm) place them relative to the user's real coordinates. */
 (function (global) {
   const places = [
     {
@@ -150,10 +151,82 @@
       blurb: "Grab-and-go sandwiches for a walk-and-eat date.",
       walk: 5, quality: 3, vibe: 4, price: 1,
       northKm: -0.35, eastKm: -0.05
+    },
+    {
+      id: "p16",
+      name: "Nonna’s Table",
+      type: "dinner",
+      area: "Little Italy",
+      cuisine: "Italian",
+      blurb: "Handmade pasta, red-check energy, shareable antipasti.",
+      walk: 3, quality: 5, vibe: 5, price: 3,
+      northKm: -0.55, eastKm: 0.85
+    },
+    {
+      id: "p17",
+      name: "Katsu Corner",
+      type: "dinner",
+      area: "Eastside",
+      cuisine: "Japanese",
+      blurb: "Crispy katsu, miso soup, weeknight-friendly prices.",
+      walk: 4, quality: 4, vibe: 3, price: 2,
+      northKm: 0.6, eastKm: 1.2
+    },
+    {
+      id: "p18",
+      name: "Fizz & Flora",
+      type: "drinks",
+      area: "Greenhouse Row",
+      cuisine: "Natural wine / spritzes",
+      blurb: "Garden patio, botanical spritzes, soft golden-hour light.",
+      walk: 3, quality: 4, vibe: 5, price: 3,
+      northKm: -1.0, eastKm: -0.7
+    },
+    {
+      id: "p19",
+      name: "Honeycomb Bakery",
+      type: "dessert",
+      area: "Market Street",
+      cuisine: "Bakery",
+      blurb: "Morning buns, fruit tarts, coffee for two to go.",
+      walk: 5, quality: 4, vibe: 4, price: 1,
+      northKm: 0.25, eastKm: 0.45
+    },
+    {
+      id: "p20",
+      name: "Saffron & Smoke",
+      type: "dinner",
+      area: "Midtown",
+      cuisine: "Middle Eastern",
+      blurb: "Grills, mezze platters, great for sharing.",
+      walk: 3, quality: 5, vibe: 4, price: 2,
+      northKm: 0.8, eastKm: -0.9
+    },
+    {
+      id: "p21",
+      name: "The Corner Diner",
+      type: "café",
+      area: "Uptown",
+      cuisine: "American diner",
+      blurb: "All-day breakfast, booths, bottomless coffee.",
+      walk: 4, quality: 3, vibe: 4, price: 1,
+      northKm: -1.5, eastKm: 0.2
+    },
+    {
+      id: "p22",
+      name: "Moonlight Gelato",
+      type: "dessert",
+      area: "Riverside",
+      cuisine: "Gelato",
+      blurb: "Late-night gelato walk — pistachio is the move.",
+      walk: 4, quality: 4, vibe: 5, price: 1,
+      northKm: -0.9, eastKm: 0.55
     }
   ];
 
   global.CL = global.CL || {};
   global.CL.data = global.CL.data || {};
+  global.CL.data.fallbackPlaces = places;
   global.CL.data.places = places;
+  global.CL.data.livePlaces = [];
 })(window);

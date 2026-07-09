@@ -120,14 +120,18 @@
     }
 
     if (context === "food") {
-      const catalog = CL.geo.placesWithDistance(CL.data.places || [], loc);
+      const raw = (CL.geo.getActivePlaces && CL.geo.getActivePlaces()) || CL.data.places || [];
+      const catalog = CL.geo.placesWithDistance(raw, loc);
       const state = CL.storage.get("places", {});
       const lines = catalog.map((p) => {
         const s = state[p.id] || {};
         return `- ${p.name} | ${p.type} | ${p.cuisine} | ${p.area} | walk ${p.walk}/5 quality ${p.quality}/5 vibe ${p.vibe}/5 price ${p.price}/5 | ${p.distanceLabel || "distance unknown"} | ${p.blurb}${s.visited ? " | VISITED" : ""}${s.wishlist ? " | WISHLIST" : ""}${s.rating ? ` | rating ${s.rating}/5` : ""}${s.notes ? ` | notes: ${s.notes}` : ""}`;
       });
+      const live = raw.some((p) => p.source === "osm");
       parts.push(
-        "FOOD MODE: Recommend only from this catalog (mock venues placed near their GPS). You may interview them about dinner first, then pick.",
+        live
+          ? "FOOD MODE: Recommend only from this catalog of real nearby places (OpenStreetMap near their GPS). You may interview them about dinner first, then pick."
+          : "FOOD MODE: Recommend only from this catalog (venues near their GPS when location is on). You may interview them about dinner first, then pick.",
         "Catalog:\n" + lines.join("\n")
       );
     }
@@ -284,7 +288,8 @@
 
   function foodReply(q, history) {
     const loc = CL.geo.getSavedLocation();
-    const catalog = CL.geo.placesWithDistance(CL.data.places || [], loc);
+    const raw = (CL.geo.getActivePlaces && CL.geo.getActivePlaces()) || CL.data.places || [];
+    const catalog = CL.geo.placesWithDistance(raw, loc);
     const state = userPlaces();
     const visitedIds = Object.keys(state).filter((id) => state[id].visited);
     const wishIds = Object.keys(state).filter((id) => state[id].wishlist);
