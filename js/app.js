@@ -53,7 +53,7 @@
           <button type="button" class="more-card" data-go="profile">
             <span class="emoji">💕</span>
             <strong>Profile & Settings</strong>
-            <p>Names, photo, Grok API key</p>
+            <p>Names, couple group, Grok API</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="trips">
@@ -96,8 +96,9 @@
         <div class="card" style="margin-top:16px">
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
-            Your private couple app. Data stays in this browser. Home is your dashboard —
-            set names under Profile, enable location in Food, and add an xAI key for live Grok.
+            Your private couple app. Data lives on this device and can sync via a Couple Group
+            (Firebase). Set names under Profile, share a group code, enable location in Food,
+            and add an xAI key for live Grok.
           </p>
         </div>
       </section>
@@ -152,6 +153,20 @@
 
     refreshHeader();
     route();
+
+    // When partner syncs data, refresh the current screen (debounced)
+    let syncRefreshTimer = null;
+    window.addEventListener("cl-sync-update", (e) => {
+      const k = e.detail && e.detail.key;
+      if (!k) return;
+      clearTimeout(syncRefreshTimer);
+      syncRefreshTimer = setTimeout(() => {
+        // Don't yank focus while typing in a field
+        const tag = (document.activeElement && document.activeElement.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        route();
+      }, 400);
+    });
   }
 
   if (document.readyState === "loading") {

@@ -27,6 +27,191 @@
     });
   }
 
+  function syncStatusLabel(st) {
+    if (!st.configured) return { text: "Firebase not set up yet", cls: "" };
+    if (!st.joined) return { text: "Ready — create or join a group", cls: "" };
+    if (st.status === "connected") return { text: "Synced live", cls: "sync-ok" };
+    if (st.status === "connecting") return { text: "Connecting…", cls: "sync-pending" };
+    if (st.status === "error") return { text: "Sync error — check config", cls: "sync-err" };
+    return { text: "Group saved · reconnecting…", cls: "sync-pending" };
+  }
+
+  function coupleGroupCardHtml() {
+    const st = CL.sync.getStatus();
+    const cfg = CL.sync.getFirebaseConfig() || {};
+    const group = st.group;
+    const badge = syncStatusLabel(st);
+
+    return `
+      <div class="card section-block couple-group-card">
+        <div class="section-label">Couple Group</div>
+        <p class="card-meta" style="margin-bottom:10px">
+          Share movies, books, trips, games, OpEds, recipes & food notes in real time.
+          Free Firebase Realtime Database · both of you use the same code.
+        </p>
+        <p class="sync-status ${badge.cls}">
+          <span class="sync-dot" aria-hidden="true"></span>
+          ${CL.escapeHtml(badge.text)}
+          ${group ? ` · code <strong class="mono">${CL.escapeHtml(group.code)}</strong>` : ""}
+        </p>
+        ${
+          st.lastError
+            ? `<p class="card-meta sync-err-msg">${CL.escapeHtml(st.lastError)}</p>`
+            : ""
+        }
+
+        <details class="firebase-setup" ${st.configured ? "" : "open"}>
+          <summary>Firebase setup (one-time, free)</summary>
+          <ol class="setup-steps">
+            <li>Open <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase Console</a> → Create project</li>
+            <li>Build → <strong>Realtime Database</strong> → Create database</li>
+            <li>Rules: allow read/write on <code>groups</code> (see README) — your code is the secret</li>
+            <li>Project settings → Web app → copy config into the fields below</li>
+          </ol>
+          <div class="form-stack" style="margin-top:10px">
+            <div class="field">
+              <label for="fb-api">apiKey</label>
+              <input id="fb-api" value="${CL.escapeHtml(cfg.apiKey || "")}" placeholder="AIza…" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="fb-url">databaseURL</label>
+              <input id="fb-url" value="${CL.escapeHtml(cfg.databaseURL || "")}" placeholder="https://….firebaseio.com" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="fb-domain">authDomain (optional)</label>
+              <input id="fb-domain" value="${CL.escapeHtml(cfg.authDomain || "")}" placeholder="project.firebaseapp.com" />
+            </div>
+            <div class="field">
+              <label for="fb-project">projectId (optional)</label>
+              <input id="fb-project" value="${CL.escapeHtml(cfg.projectId || "")}" placeholder="my-project" />
+            </div>
+            <button type="button" class="btn btn-secondary btn-block" id="fb-save">Save Firebase config</button>
+            ${
+              st.configured
+                ? `<button type="button" class="btn btn-ghost btn-sm" id="fb-clear">Clear Firebase config</button>`
+                : ""
+            }
+          </div>
+        </details>
+
+        <div class="form-stack" style="margin-top:14px">
+          ${
+            group
+              ? `
+            <div class="group-joined">
+              <div class="card-title">You're in: ${CL.escapeHtml(group.label || "Couple group")}</div>
+              <p class="card-meta">Share this code with your partner:</p>
+              <div class="group-code-display mono" id="group-code-text">${CL.escapeHtml(group.code)}</div>
+              <div class="card-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="grp-copy">Copy code</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="grp-push">Push my data now</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="grp-leave">Leave group</button>
+              </div>
+            </div>`
+              : `
+            <div class="field">
+              <label for="grp-label">Group nickname (optional)</label>
+              <input id="grp-label" placeholder="e.g. ${CL.escapeHtml(CL.profile.coupleLabel())}" />
+            </div>
+            <button type="button" class="btn btn-primary btn-block" id="grp-create" ${st.configured ? "" : "disabled"}>
+              Create couple group
+            </button>
+            <div class="or-divider"><span>or join</span></div>
+            <div class="field">
+              <label for="grp-code">Partner's group code</label>
+              <input id="grp-code" class="mono" placeholder="e.g. K7M2QX" maxlength="8" autocomplete="off" style="text-transform:uppercase;letter-spacing:0.12em" />
+            </div>
+            <button type="button" class="btn btn-secondary btn-block" id="grp-join" ${st.configured ? "" : "disabled"}>
+              Join couple group
+            </button>
+            ${
+              !st.configured
+                ? `<p class="filter-hint">Save Firebase config above before creating or joining.</p>`
+                : ""
+            }`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function bindCoupleGroup(root, paint) {
+    root.querySelector("#fb-save")?.addEventListener("click", () => {
+      CL.sync.setFirebaseConfig({
+        apiKey: root.querySelector("#fb-api").value,
+        databaseURL: root.querySelector("#fb-url").value,
+        authDomain: root.querySelector("#fb-domain").value,
+        projectId: root.querySelector("#fb-project").value
+      });
+      CL.toast("Firebase config saved");
+      if (CL.sync.isJoined()) CL.sync.reconnect();
+      paint();
+    });
+
+    root.querySelector("#fb-clear")?.addEventListener("click", () => {
+      if (!confirm("Remove Firebase config from this device?")) return;
+      CL.sync.clearFirebaseConfig();
+      CL.toast("Firebase config cleared");
+      paint();
+    });
+
+    root.querySelector("#grp-create")?.addEventListener("click", async () => {
+      const btn = root.querySelector("#grp-create");
+      btn.disabled = true;
+      btn.textContent = "Creating…";
+      try {
+        const label = root.querySelector("#grp-label")?.value.trim() || "";
+        await CL.sync.createGroup(label);
+        paint();
+      } catch (err) {
+        CL.toast(err.message || "Could not create group");
+        btn.disabled = false;
+        btn.textContent = "Create couple group";
+      }
+    });
+
+    root.querySelector("#grp-join")?.addEventListener("click", async () => {
+      const btn = root.querySelector("#grp-join");
+      const code = root.querySelector("#grp-code")?.value || "";
+      btn.disabled = true;
+      btn.textContent = "Joining…";
+      try {
+        await CL.sync.joinGroup(code);
+        paint();
+      } catch (err) {
+        CL.toast(err.message || "Could not join");
+        btn.disabled = false;
+        btn.textContent = "Join couple group";
+      }
+    });
+
+    root.querySelector("#grp-copy")?.addEventListener("click", async () => {
+      const g = CL.sync.getGroup();
+      if (!g) return;
+      try {
+        await navigator.clipboard.writeText(g.code);
+        CL.toast("Code copied");
+      } catch {
+        CL.toast("Code: " + g.code);
+      }
+    });
+
+    root.querySelector("#grp-push")?.addEventListener("click", async () => {
+      try {
+        await CL.sync.pushAllLocal();
+        CL.toast("Pushed latest data to the group");
+      } catch (err) {
+        CL.toast(err.message || "Push failed");
+      }
+    });
+
+    root.querySelector("#grp-leave")?.addEventListener("click", async () => {
+      if (!confirm("Leave this couple group? Data stays on this phone; it will stop syncing.")) return;
+      await CL.sync.leaveGroup();
+      paint();
+    });
+  }
+
   function render(root) {
     function paint() {
       const profile = CL.profile.get();
@@ -36,7 +221,7 @@
       root.innerHTML = `
         <section class="page">
           <h1 class="page-title">Profile & Settings</h1>
-          <p class="page-sub">Couple info, photo, and Grok API</p>
+          <p class="page-sub">Couple info, shared group, and Grok API</p>
 
           <div class="card section-block profile-card">
             <div class="profile-avatar-row">
@@ -58,6 +243,8 @@
               </div>
             </div>
           </div>
+
+          ${coupleGroupCardHtml()}
 
           <div class="card section-block">
             <div class="section-label">Couple profiles</div>
@@ -131,6 +318,8 @@
           </div>
         </section>
       `;
+
+      bindCoupleGroup(root, paint);
 
       root.querySelector("#pf-save").addEventListener("click", () => {
         CL.profile.set({
@@ -219,6 +408,13 @@
         location.hash = "#home";
       });
     }
+
+    const onSync = () => {
+      // Refresh couple group card when status changes while on profile
+      if (location.hash.replace(/^#/, "").split("?")[0] === "profile") paint();
+    };
+    window.addEventListener("cl-sync-status", onSync);
+    window.addEventListener("cl-sync-update", onSync);
 
     paint();
   }

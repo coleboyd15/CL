@@ -1,17 +1,19 @@
 /* Geolocation + distance helpers + OpenStreetMap nearby places */
 (function (global) {
   const LOCATION_KEY = "userLocation";
-  const NEARBY_CACHE_KEY = "nearbyPlacesCache_v2";
-  const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-  const CACHE_RADIUS_DEG = 0.012; // ~0.8 mi — reuse cache if still nearby
+  const NEARBY_CACHE_KEY = "nearbyPlacesCache_v3";
+  const CACHE_TTL_MS = 45 * 60 * 1000; // 45 minutes
+  const CACHE_RADIUS_DEG = 0.015; // ~1 mi — reuse cache if still nearby
   /** Default search ring ~3.7 mi; sparse areas expand further. */
   const DEFAULT_RADIUS_M = 6000;
   const EXPANDED_RADIUS_M = 12000; // ~7.5 mi when few results
-  const MIN_PLACES_BEFORE_EXPAND = 12;
+  const MIN_PLACES_BEFORE_EXPAND = 10;
   const MAX_PLACES = 60;
+  const OVERPASS_TIMEOUT_MS = 10000;
   const OVERPASS_URLS = [
     "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter"
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
   ];
   const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
 
@@ -57,33 +59,96 @@
     return Math.round(miles) + " mi";
   }
 
-  function requestLocation() {
+  function locationErrorMessage(err) {
+    if (!err) return "Could not get your location.";
+    if (err.code === 1) {
+      return "Location permission denied. Allow location for this site in browser settings, then try again.";
+    }
+    if (err.code === 2) {
+      return "Location unavailable. Try outdoors, turn on Location Services, or check Wi‑Fi.";
+    }
+    if (err.code === 3) return "Location timed out. Try again — we’ll use a faster GPS mode.";
+    return err.message || "Could not get your location.";
+  }
+
+  function getPosition(options) {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error("Geolocation is not supported on this device."));
+        reject(Object.assign(new Error("Geolocation is not supported on this device."), { code: 0 }));
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            updatedAt: Date.now()
-          };
-          setSavedLocation(loc);
-          resolve(loc);
-        },
-        (err) => {
-          let msg = "Could not get your location.";
-          if (err.code === 1) msg = "Location permission denied. Enable it in browser settings.";
-          if (err.code === 2) msg = "Location unavailable. Try again outdoors or check GPS.";
-          if (err.code === 3) msg = "Location request timed out. Try again.";
-          reject(new Error(msg));
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-      );
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
     });
+  }
+
+  /**
+   * Fast-then-accurate GPS:
+   * 1) Prefer a recent/cached or network position (quick)
+   * 2) If that fails, fall back to high-accuracy with a longer timeout
+   */
+  async function requestLocation(options) {
+    options = options || {};
+    const preferFast = options.preferFast !== false;
+
+    if (!navigator.geolocation) {
+      throw new Error("Geolocation is not supported on this device.");
+    }
+    if (typeof window !== "undefined" && !window.isSecureContext && location.protocol === "http:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+      throw new Error("Location needs HTTPS (or localhost). Open the app via your Vercel URL or a local server.");
+    }
+
+    let pos;
+    try {
+      if (preferFast) {
+        pos = await getPosition({
+          enableHighAccuracy: false,
+          timeout: 8000,
+          maximumAge: 120000
+        });
+      } else {
+        throw { code: 3 }; // force accurate path
+      }
+    } catch (fastErr) {
+      if (fastErr && fastErr.code === 1) throw new Error(locationErrorMessage(fastErr));
+      try {
+        pos = await getPosition({
+          enableHighAccuracy: true,
+          timeout: 16000,
+          maximumAge: 30000
+        });
+      } catch (slowErr) {
+        // Last resort: use previously saved pin if still somewhat fresh
+        const saved = getSavedLocation();
+        if (saved && saved.lat != null && Date.now() - (saved.updatedAt || 0) < 24 * 60 * 60 * 1000) {
+          return saved;
+        }
+        throw new Error(locationErrorMessage(slowErr));
+      }
+    }
+
+    const loc = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+      updatedAt: Date.now()
+    };
+    setSavedLocation(loc);
+
+    // Optional background refine (don't block UI)
+    if (preferFast && (pos.coords.accuracy == null || pos.coords.accuracy > 80)) {
+      getPosition({ enableHighAccuracy: true, timeout: 12000, maximumAge: 0 })
+        .then((fine) => {
+          setSavedLocation({
+            lat: fine.coords.latitude,
+            lng: fine.coords.longitude,
+            accuracy: fine.coords.accuracy,
+            updatedAt: Date.now()
+          });
+        })
+        .catch(() => {});
+    }
+
+    return loc;
   }
 
   /**
@@ -307,14 +372,32 @@
     });
   }
 
+  function withTimeout(promise, ms, label) {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error((label || "Request") + " timed out")), ms);
+      promise.then(
+        (v) => {
+          clearTimeout(t);
+          resolve(v);
+        },
+        (e) => {
+          clearTimeout(t);
+          reject(e);
+        }
+      );
+    });
+  }
+
   async function reverseGeocode(lat, lng) {
     try {
       const url =
         NOMINATIM_URL +
         `?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&format=json&zoom=14`;
-      const res = await fetch(url, {
-        headers: { Accept: "application/json" }
-      });
+      const res = await withTimeout(
+        fetch(url, { headers: { Accept: "application/json" } }),
+        4000,
+        "Reverse geocode"
+      );
       if (!res.ok) return "";
       const data = await res.json();
       const a = data.address || {};
@@ -335,29 +418,61 @@
     }
   }
 
-  async function queryOverpass(lat, lng, radiusM) {
-    const query = `
-[out:json][timeout:25];
+  function buildOverpassQuery(lat, lng, radiusM) {
+    // Slightly tighter query = faster response; still covers food/drink/dessert
+    return `
+[out:json][timeout:12];
 (
-  node["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten|food_court)$"](around:${radiusM},${lat},${lng});
-  way["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten|food_court)$"](around:${radiusM},${lat},${lng});
-  node["shop"~"^(bakery|pastry|chocolate|coffee|confectionery)$"](around:${radiusM},${lat},${lng});
-  way["shop"~"^(bakery|pastry|chocolate|coffee|confectionery)$"](around:${radiusM},${lat},${lng});
+  nwr["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten)$"](around:${radiusM},${lat},${lng});
+  nwr["shop"~"^(bakery|pastry|chocolate|coffee|confectionery)$"](around:${radiusM},${lat},${lng});
 );
-out center 100;
+out center ${MAX_PLACES};
 `.trim();
+  }
+
+  async function fetchOverpassEndpoint(endpoint, query, signal) {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: "data=" + encodeURIComponent(query),
+      signal
+    });
+    if (!res.ok) throw new Error("Overpass " + res.status);
+    const data = await res.json();
+    return data.elements || [];
+  }
+
+  /**
+   * Race multiple Overpass mirrors — first successful response wins (much faster/reliable).
+   */
+  async function queryOverpass(lat, lng, radiusM) {
+    const query = buildOverpassQuery(lat, lng, radiusM);
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const signal = controller ? controller.signal : undefined;
+
+    const attempts = OVERPASS_URLS.map((endpoint) =>
+      withTimeout(fetchOverpassEndpoint(endpoint, query, signal), OVERPASS_TIMEOUT_MS, "Map")
+    );
+
+    try {
+      // Promise.any when available; otherwise sequential fallback
+      if (typeof Promise.any === "function") {
+        const elements = await Promise.any(attempts);
+        if (controller) controller.abort();
+        return elements;
+      }
+    } catch (_) {
+      /* all rejected — fall through */
+    }
 
     let lastErr;
     for (const endpoint of OVERPASS_URLS) {
       try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: "data=" + encodeURIComponent(query)
-        });
-        if (!res.ok) throw new Error("Overpass " + res.status);
-        const data = await res.json();
-        return data.elements || [];
+        return await withTimeout(
+          fetchOverpassEndpoint(endpoint, query),
+          OVERPASS_TIMEOUT_MS,
+          "Map"
+        );
       } catch (err) {
         lastErr = err;
       }
@@ -395,6 +510,16 @@ out center 100;
     });
   }
 
+  function mockAroundUser(userLoc, areaName, note, source) {
+    const mock = placesWithDistance(CL.data.fallbackPlaces || CL.data.places || [], userLoc);
+    return {
+      places: mock,
+      source: source || "mock-fallback",
+      area: areaName || "",
+      note: note || "Showing realistic sample places near your pin."
+    };
+  }
+
   async function fetchNearbyPlaces(userLoc, options) {
     options = options || {};
     const radiusM = options.radiusM || DEFAULT_RADIUS_M;
@@ -408,33 +533,66 @@ out center 100;
       };
     }
 
-    if (!force) {
-      const cached = getNearbyCache(userLoc);
-      if (cached) {
-        // Recompute walk scores from current distance in case you moved slightly
-        const places = placesWithDistance(cached.places, userLoc).map((p) =>
-          Object.assign({}, p, { walk: walkScoreFromMiles(p.distanceMiles) })
-        );
-        return {
-          places,
-          source: cached.source || "cache",
-          area: cached.area || "",
-          fromCache: true,
-          radiusM: cached.radiusM || radiusM
-        };
-      }
+    const cached = getNearbyCache(userLoc);
+    if (!force && cached) {
+      const places = placesWithDistance(cached.places, userLoc).map((p) =>
+        Object.assign({}, p, { walk: walkScoreFromMiles(p.distanceMiles) })
+      );
+      return {
+        places,
+        source: cached.source || "cache",
+        area: cached.area || "",
+        fromCache: true,
+        radiusM: cached.radiusM || radiusM
+      };
     }
 
+    // Geocode in parallel but never block map results on it
+    const areaPromise = reverseGeocode(userLoc.lat, userLoc.lng);
+
     try {
-      const [elements, areaName] = await Promise.all([
-        queryOverpass(userLoc.lat, userLoc.lng, radiusM),
-        reverseGeocode(userLoc.lat, userLoc.lng)
-      ]);
+      let elements;
+      try {
+        elements = await queryOverpass(userLoc.lat, userLoc.lng, radiusM);
+      } catch (primaryErr) {
+        console.warn("Primary Overpass failed:", primaryErr);
+        // One more attempt at expanded radius only (sometimes denser ring helps cache)
+        try {
+          elements = await queryOverpass(userLoc.lat, userLoc.lng, EXPANDED_RADIUS_M);
+        } catch (err2) {
+          const areaName = await areaPromise.catch(() => "");
+          // Prefer stale cache over pure mock if we had anything nearby before
+          if (cached && cached.places && cached.places.length) {
+            const places = placesWithDistance(cached.places, userLoc);
+            return {
+              places,
+              source: "stale-cache",
+              area: cached.area || areaName,
+              note: "Map is slow — showing last saved nearby places.",
+              error: err2.message
+            };
+          }
+          return mockAroundUser(
+            userLoc,
+            areaName,
+            "Couldn’t reach OpenStreetMap — using realistic sample places around you."
+          );
+        }
+      }
+
+      let areaName = "";
+      try {
+        areaName = await Promise.race([
+          areaPromise,
+          new Promise((r) => setTimeout(() => r(""), 500))
+        ]);
+      } catch (_) {
+        areaName = "";
+      }
 
       let places = normalizeOsmPlaces(elements, userLoc, areaName);
       let usedRadius = radiusM;
 
-      // Sparse area? widen the ring so something still shows (with worse walk scores)
       if (places.length < MIN_PLACES_BEFORE_EXPAND && !options.radiusM) {
         try {
           const wider = await queryOverpass(userLoc.lat, userLoc.lng, EXPANDED_RADIUS_M);
@@ -448,19 +606,30 @@ out center 100;
         }
       }
 
+      // Finish geocode if still pending (non-blocking-ish)
+      if (!areaName) {
+        try {
+          areaName = await areaPromise;
+        } catch (_) {}
+        if (areaName) {
+          places = places.map((p) =>
+            p.area === "Nearby" ? Object.assign({}, p, { area: areaName }) : p
+          );
+        }
+      }
+
       if (!places.length) {
-        // Sparse map data — realistic mocks anchored to GPS
-        const mock = placesWithDistance(CL.data.fallbackPlaces || CL.data.places || [], userLoc);
-        setNearbyCache(userLoc, mock.map(stripRuntime), {
+        const mock = mockAroundUser(
+          userLoc,
+          areaName,
+          "Few mapped venues here — showing realistic nearby placeholders.",
+          "mock-local"
+        );
+        setNearbyCache(userLoc, mock.places.map(stripRuntime), {
           area: areaName,
           source: "mock-local"
         });
-        return {
-          places: mock,
-          source: "mock-local",
-          area: areaName,
-          note: "Few mapped venues here — showing realistic nearby placeholders."
-        };
+        return mock;
       }
 
       setNearbyCache(userLoc, places, {
@@ -483,14 +652,20 @@ out center 100;
       };
     } catch (err) {
       console.warn("Nearby places fetch failed:", err);
-      const mock = placesWithDistance(CL.data.fallbackPlaces || CL.data.places || [], userLoc);
-      return {
-        places: mock,
-        source: "mock-fallback",
-        area: "",
-        error: err.message || "Map lookup failed",
-        note: "Couldn’t reach OpenStreetMap — using local sample places around you."
-      };
+      if (cached && cached.places && cached.places.length) {
+        return {
+          places: placesWithDistance(cached.places, userLoc),
+          source: "stale-cache",
+          area: cached.area || "",
+          note: "Showing last saved places — map refresh failed.",
+          error: err.message
+        };
+      }
+      return mockAroundUser(
+        userLoc,
+        "",
+        "Couldn’t reach OpenStreetMap — using local sample places around you."
+      );
     }
   }
 

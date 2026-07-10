@@ -168,12 +168,35 @@
     });
   }
 
-  function locationBannerHtml(loc, locating, placesMeta) {
-    if (locating) {
+  function locationBannerHtml(loc, phase, placesMeta) {
+    // phase: idle | locating | loading-places | ready
+    if (phase === "locating") {
       return `
         <div class="card location-banner">
-          <div class="card-title">Finding places near you…</div>
-          <p class="card-meta">GPS + OpenStreetMap restaurants, cafés, bars & sweets</p>
+          <div class="loc-loading">
+            <span class="spinner" aria-hidden="true"></span>
+            <div>
+              <div class="card-title">Getting your location…</div>
+              <p class="card-meta">Using a quick GPS fix first — allow location if prompted</p>
+            </div>
+          </div>
+        </div>`;
+    }
+    if (phase === "loading-places") {
+      return `
+        <div class="card location-banner on">
+          <div class="loc-loading">
+            <span class="spinner" aria-hidden="true"></span>
+            <div>
+              <div class="card-title">Finding places near you…</div>
+              <p class="card-meta">OpenStreetMap restaurants, cafés, bars & desserts (several mirrors)</p>
+              ${
+                loc
+                  ? `<p class="card-meta mono">${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}</p>`
+                  : ""
+              }
+            </div>
+          </div>
         </div>`;
     }
     if (loc) {
@@ -181,15 +204,21 @@
       const src = placesMeta && placesMeta.source;
       const area = placesMeta && placesMeta.area;
       let srcLabel = "Sample places near your pin";
-      if (src === "osm" || src === "cache") srcLabel = "Live places from OpenStreetMap";
+      if (src === "osm") srcLabel = "Live places from OpenStreetMap";
+      if (src === "cache") srcLabel = "Saved nearby places (instant)";
+      if (src === "stale-cache") srcLabel = "Last saved places (map was slow)";
       if (src === "mock-local") srcLabel = "Local samples (sparse map data here)";
       if (src === "mock-fallback") srcLabel = "Offline samples (map unreachable)";
+      const acc =
+        loc.accuracy != null && loc.accuracy < 5000
+          ? ` · ±${Math.round(loc.accuracy)}m`
+          : "";
       return `
         <div class="card location-banner on">
           <div class="row-between">
             <div>
               <div class="card-title">📍 ${CL.escapeHtml(area ? area + " · " : "")}Using your location</div>
-              <p class="card-meta">${CL.escapeHtml(srcLabel)} · updated ${CL.escapeHtml(when)}</p>
+              <p class="card-meta">${CL.escapeHtml(srcLabel)} · updated ${CL.escapeHtml(when)}${CL.escapeHtml(acc)}</p>
               <p class="card-meta mono">${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}</p>
               ${
                 placesMeta && placesMeta.note
@@ -208,28 +237,60 @@
       <div class="card location-banner">
         <div class="card-title">See real places near you</div>
         <p class="card-meta" style="margin-bottom:10px">
-          Share GPS to load restaurants, cafés, bars, and dessert spots from OpenStreetMap (up to ~4–7 mi). Farther spots stay on the list with lower Walk scores — filter “Walkable” when you want a stroll.
+          Share GPS for restaurants, cafés, bars, and dessert spots nearby (up to ~4–7 mi).
+          Farther spots stay listed with lower Walk scores. If maps are slow, we fall back to realistic samples around your pin.
         </p>
-        <button type="button" class="btn btn-primary" id="btn-locate">Use My Location</button>
+        <button type="button" class="btn btn-primary" id="btn-locate">
+          Use My Location
+        </button>
       </div>`;
   }
 
   function render(root) {
     let active = CL.storage.get("foodFilters", []);
-    let locating = false;
+    let phase = "idle"; // idle | locating | loading-places
     let placesMeta = { source: CL.data.livePlaces && CL.data.livePlaces.length ? "cache" : "mock" };
+    let loadToken = 0;
 
     async function loadNearby(force) {
       const loc = CL.geo.getSavedLocation();
       if (!loc) {
         CL.geo.setLivePlaces([]);
         placesMeta = { source: "mock" };
+        phase = "idle";
+        paint();
         return;
       }
-      locating = true;
+
+      // Instant paint from cache while a forced refresh runs
+      if (!force) {
+        const cached = CL.geo.getNearbyCache && CL.geo.getNearbyCache(loc);
+        if (cached && cached.places && cached.places.length) {
+          const places = CL.geo.placesWithDistance(cached.places, loc);
+          CL.geo.setLivePlaces(places);
+          placesMeta = {
+            source: "cache",
+            area: cached.area || "",
+            note: ""
+          };
+          phase = "idle";
+          paint();
+          return;
+        }
+      } else {
+        const cached = CL.geo.getNearbyCache && CL.geo.getNearbyCache(loc);
+        if (cached && cached.places && cached.places.length) {
+          CL.geo.setLivePlaces(CL.geo.placesWithDistance(cached.places, loc));
+          placesMeta = { source: "cache", area: cached.area || "", note: "Refreshing…" };
+        }
+      }
+
+      const token = ++loadToken;
+      phase = "loading-places";
       paint();
       try {
         const result = await CL.geo.fetchNearbyPlaces(loc, { force: !!force });
+        if (token !== loadToken) return;
         CL.geo.setLivePlaces(result.places || []);
         placesMeta = {
           source: result.fromCache ? "cache" : result.source,
@@ -237,27 +298,49 @@
           note: result.note || ""
         };
         if (!result.fromCache) {
-          if (result.source === "osm") CL.toast("Loaded nearby places from OpenStreetMap");
+          if (result.source === "osm") CL.toast("Loaded nearby places");
           else if (result.note) CL.toast(result.note);
         }
       } catch (err) {
+        if (token !== loadToken) return;
         CL.toast(err.message || "Could not load nearby places");
-        placesMeta = { source: "mock-fallback", note: err.message };
+        // Ensure something is on screen
+        if (!CL.data.livePlaces || !CL.data.livePlaces.length) {
+          const fallback = CL.geo.placesWithDistance(CL.data.fallbackPlaces || [], loc);
+          CL.geo.setLivePlaces(fallback);
+        }
+        placesMeta = {
+          source: "mock-fallback",
+          note: err.message || "Map lookup failed — showing samples near you."
+        };
       } finally {
-        locating = false;
-        paint();
+        if (token === loadToken) {
+          phase = "idle";
+          paint();
+        }
       }
     }
 
     async function doLocate() {
-      locating = true;
+      const token = ++loadToken;
+      phase = "locating";
       paint();
       try {
-        await CL.geo.requestLocation();
+        await CL.geo.requestLocation({ preferFast: true });
+        if (token !== loadToken) return;
+        CL.toast("Location found");
         await loadNearby(true);
       } catch (err) {
+        if (token !== loadToken) return;
         CL.toast(err.message || "Location failed");
-        locating = false;
+        phase = "idle";
+        // Still offer mock catalog so the page isn't empty
+        if (!CL.geo.getSavedLocation()) {
+          placesMeta = {
+            source: "mock",
+            note: err.message || "Enable location for real nearby places."
+          };
+        }
         paint();
       }
     }
@@ -266,7 +349,6 @@
       const loc = CL.geo.getSavedLocation();
       let places = enrichedPlaces();
 
-      // Sort by distance when location is on
       if (loc) {
         places = places.slice().sort((a, b) => (a.distanceMiles || 99) - (b.distanceMiles || 99));
       }
@@ -274,6 +356,8 @@
       const filtered = applyFilters(places, active);
       const names = CL.profile.displayNames();
       const live = !!(CL.data.livePlaces && CL.data.livePlaces.length && loc);
+      const busy = phase === "locating" || phase === "loading-places";
+      const showListSpinner = busy && !filtered.length;
 
       root.innerHTML = `
         <section class="page">
@@ -281,7 +365,7 @@
           <p class="page-sub">For ${CL.escapeHtml(names.myName)} & ${CL.escapeHtml(names.partnerName)} · filters, visits & Grok</p>
 
           <div class="section-block" id="loc-wrap">
-            ${locationBannerHtml(loc, locating, placesMeta)}
+            ${locationBannerHtml(loc, phase === "idle" ? (loc ? "ready" : "idle") : phase, placesMeta)}
           </div>
 
           <div class="filter-bar section-block">
@@ -294,13 +378,15 @@
             </div>
             <p class="filter-hint">${filtered.length} place${filtered.length === 1 ? "" : "s"}${
               loc ? " · sorted by distance" : " · enable location for real nearby spots"
-            }${live ? " · OpenStreetMap" : ""}</p>
+            }${live ? " · map data" : ""}${busy ? " · loading…" : ""}</p>
           </div>
 
           <div class="stack-sm" id="food-list">
             ${
-              locating
-                ? `<div class="empty"><div class="emoji">🗺️</div><p>Looking up places near you…</p></div>`
+              showListSpinner
+                ? `<div class="empty"><div class="spinner spinner-lg" aria-hidden="true"></div><p>${
+                    phase === "locating" ? "Waiting for GPS…" : "Looking up places near you…"
+                  }</p></div>`
                 : filtered.length
                   ? filtered.map(cardHtml).join("")
                   : `<div class="empty"><div class="emoji">🍽️</div><p>No places match these filters. Loosen them a bit.</p></div>`
@@ -313,9 +399,11 @@
 
       root.querySelector("#btn-locate")?.addEventListener("click", doLocate);
       root.querySelector("#btn-clear-loc")?.addEventListener("click", () => {
+        loadToken++;
         CL.geo.clearLocation();
         CL.geo.setLivePlaces([]);
         placesMeta = { source: "mock" };
+        phase = "idle";
         CL.toast("Location cleared");
         paint();
       });
@@ -348,15 +436,20 @@
         placeholder: "e.g. Ask us about dinner then recommend a place",
         welcome: loc
           ? live
-            ? "I can see real places near your location (OpenStreetMap). Tell me what you're craving — or say “interview us for dinner.”"
+            ? "I can see real places near your location. Tell me what you're craving — or say “interview us for dinner.”"
             : "Location is on. Tell me what you're craving — or say “interview us for dinner” and I’ll recommend nearby."
           : "Tip: tap Use My Location for real nearby restaurants & cafés. Or say “ask us questions about dinner then recommend a place.”"
       });
     }
 
+    // Live refresh when partner updates food notes via sync
+    function onSyncUpdate(e) {
+      if (e.detail && e.detail.key === "places") paint();
+    }
+    window.addEventListener("cl-sync-update", onSyncUpdate);
+
     paint();
 
-    // Auto-load cached or fresh nearby when GPS already saved
     if (CL.geo.getSavedLocation()) {
       loadNearby(false);
     }
