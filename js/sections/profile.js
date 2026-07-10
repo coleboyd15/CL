@@ -291,13 +291,23 @@
                 <input id="pf-key" type="password" autocomplete="off" placeholder="${keySet ? "••••••••  (enter to replace)" : "xai-…"}" />
               </div>
               <div class="field">
-                <label for="pf-model">Model</label>
+                <label for="pf-model">Grok model (all chats)</label>
                 <select id="pf-model">
-                  <option value="grok-3-mini" ${settings.xaiModel === "grok-3-mini" ? "selected" : ""}>grok-3-mini (fast)</option>
-                  <option value="grok-3" ${settings.xaiModel === "grok-3" ? "selected" : ""}>grok-3</option>
-                  <option value="grok-2-latest" ${settings.xaiModel === "grok-2-latest" ? "selected" : ""}>grok-2-latest</option>
+                  ${(CL.profile.GROK_MODELS || [])
+                    .map((m) => {
+                      const selected =
+                        (settings.xaiModel || CL.profile.DEFAULT_SETTINGS.xaiModel) === m.id
+                          ? "selected"
+                          : "";
+                      return `<option value="${CL.escapeHtml(m.id)}" ${selected}>${CL.escapeHtml(m.label)}</option>`;
+                    })
+                    .join("")}
                 </select>
               </div>
+              <p class="filter-hint" style="margin-top:-4px">
+                Active: <strong class="mono">${CL.escapeHtml(CL.profile.getGrokModel())}</strong>
+                · used by Food, Movies, Trips, Recipes, Books &amp; more
+              </p>
               <div class="toggle-row">
                 <span>Use live API when key is set</span>
                 <label><input type="checkbox" id="pf-use-api" ${settings.useGrokApi !== false ? "checked" : ""} /></label>

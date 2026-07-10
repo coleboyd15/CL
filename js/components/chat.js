@@ -199,7 +199,7 @@
 
     if (useApi) {
       try {
-        return await callXai(key, settings.xaiModel || "grok-3-mini", history, context, options);
+        return await callXai(key, CL.profile.getGrokModel(), history, context, options);
       } catch (err) {
         console.warn("Grok API error, falling back:", err);
         const offline = await offlineRespond(history, context);

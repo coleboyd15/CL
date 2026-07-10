@@ -73,7 +73,8 @@ Optional: copy `js/firebase-config.example.js` → `js/firebase-config.js` with 
 
 1. Get a key at [console.x.ai](https://console.x.ai/)
 2. **Profile → xAI API key** → save  
-3. Use **Ask Grok** on Food, Movies, Trips, Recipes, Books  
+3. **Profile → Grok model** — default is **grok-4.5** (also grok-4.3, grok-build, legacy options)  
+4. Use **Ask Grok** on Food, Movies, Trips, Recipes, Books — all use the selected model  
 
 Without a key, smart offline mode still works.
 

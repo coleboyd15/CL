@@ -12,9 +12,27 @@
 
   const DEFAULT_SETTINGS = {
     xaiApiKey: "",
-    xaiModel: "grok-3-mini",
+    xaiModel: "grok-4.5",
     useGrokApi: true
   };
+
+  /** Chat / completions models shown in Profile and used by all Grok features */
+  const GROK_MODELS = [
+    { id: "grok-4.5", label: "grok-4.5 — newest flagship (recommended)" },
+    { id: "grok-4.3", label: "grok-4.3" },
+    { id: "grok-4.20-0309-reasoning", label: "grok-4.20 reasoning" },
+    { id: "grok-4.20-0309-non-reasoning", label: "grok-4.20 non-reasoning" },
+    { id: "grok-build-0.1", label: "grok-build — code-focused" },
+    { id: "grok-3", label: "grok-3 (legacy)" },
+    { id: "grok-3-mini", label: "grok-3-mini — fast legacy" },
+    { id: "grok-2-latest", label: "grok-2-latest (legacy)" }
+  ];
+
+  function getGrokModel() {
+    const s = getSettings();
+    const id = (s.xaiModel || "").trim() || DEFAULT_SETTINGS.xaiModel;
+    return id;
+  }
 
   function getProfile() {
     return Object.assign({}, DEFAULT_PROFILE, CL.storage.get("profile", {}));
@@ -27,11 +45,23 @@
   }
 
   function getSettings() {
-    return Object.assign({}, DEFAULT_SETTINGS, CL.storage.get("settings", {}));
+    const saved = Object.assign({}, CL.storage.get("settings", {}) || {});
+    const next = Object.assign({}, DEFAULT_SETTINGS, saved);
+    // Bump silent old defaults to newest flagship; keep an explicit Profile choice
+    if (!saved.modelUserSet) {
+      if (!saved.xaiModel || saved.xaiModel === "grok-3-mini" || saved.xaiModel === "grok-2-latest") {
+        next.xaiModel = DEFAULT_SETTINGS.xaiModel;
+      }
+    }
+    return next;
   }
 
   function setSettings(patch) {
-    const next = Object.assign(getSettings(), patch || {});
+    const current = Object.assign({}, CL.storage.get("settings", {}) || {});
+    const next = Object.assign({}, DEFAULT_SETTINGS, current, patch || {});
+    if (patch && Object.prototype.hasOwnProperty.call(patch, "xaiModel")) {
+      next.modelUserSet = true;
+    }
     CL.storage.set("settings", next);
     return next;
   }
@@ -88,6 +118,8 @@
     set: setProfile,
     getSettings,
     setSettings,
+    getGrokModel,
+    GROK_MODELS,
     displayNames,
     coupleLabel,
     initials,

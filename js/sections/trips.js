@@ -234,7 +234,7 @@
                 Authorization: "Bearer " + key
               },
               body: JSON.stringify({
-                model: settings.xaiModel || "grok-3-mini",
+                model: CL.profile.getGrokModel(),
                 messages: [
                   { role: "system", content: system },
                   { role: "user", content: prompt }
