@@ -21,7 +21,7 @@
             <div class="home-hero-top">
               ${CL.profile.avatarHtml("avatar-lg")}
               <div class="home-hero-text">
-                <p class="home-kicker">CL · America 250</p>
+                <p class="home-kicker">CL</p>
                 <h1 class="page-title home-title">${welcomeLine}</h1>
                 <p class="page-sub" style="margin-bottom:0">
                   ${
@@ -101,11 +101,6 @@
                 <span class="emoji">🍳</span>
                 <strong>Recipes</strong>
                 <span>Cook together</span>
-              </a>
-              <a href="#boredom" class="quick-card">
-                <span class="emoji">📖</span>
-                <strong>Boredom</strong>
-                <span>Daily short essays</span>
               </a>
               <a href="#profile" class="quick-card">
                 <span class="emoji">💕</span>

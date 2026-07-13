@@ -1,4 +1,6 @@
 (function (global) {
+  const SORT_KEY = "moviesSort";
+
   function getData() {
     return CL.storage.get("movies", { watched: [], wishlist: [] });
   }
@@ -7,13 +9,62 @@
     CL.storage.set("movies", data);
   }
 
+  function yearWatchedOf(m) {
+    if (m.watchedYear != null && !Number.isNaN(Number(m.watchedYear))) {
+      return Number(m.watchedYear);
+    }
+    if (m.addedAt) {
+      const y = new Date(m.addedAt).getFullYear();
+      if (!Number.isNaN(y)) return y;
+    }
+    return 0;
+  }
+
+  function sortMovies(list, sortBy) {
+    const arr = (list || []).slice();
+    if (sortBy === "title") {
+      arr.sort((a, b) =>
+        String(a.title || "").localeCompare(String(b.title || ""), undefined, { sensitivity: "base" })
+      );
+    } else if (sortBy === "year") {
+      // Year watched — newest first
+      arr.sort((a, b) => {
+        const dy = yearWatchedOf(b) - yearWatchedOf(a);
+        if (dy) return dy;
+        return (b.addedAt || 0) - (a.addedAt || 0);
+      });
+    } else {
+      // ranking — highest rating first, then recency
+      arr.sort((a, b) => {
+        const dr = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+        if (dr) return dr;
+        return (b.addedAt || 0) - (a.addedAt || 0);
+      });
+    }
+    return arr;
+  }
+
   function movieCard(m, mode) {
+    const yw = yearWatchedOf(m);
+    const ratingHtml =
+      m.rating != null && Number(m.rating) > 0
+        ? CL.rating.starsHtml(m.rating)
+        : mode === "wish"
+          ? '<span class="tag wish">Wishlist</span>'
+          : "";
     return `
       <article class="card" data-id="${CL.escapeHtml(m.id)}" data-mode="${mode}">
         <div class="row-between">
           <div>
-            <div class="card-title">${CL.escapeHtml(m.title)}${m.year ? ` <span class="card-meta">(${CL.escapeHtml(String(m.year))})</span>` : ""}</div>
-            ${m.rating ? CL.rating.starsHtml(m.rating) : mode === "wish" ? '<span class="tag wish">Wishlist</span>' : ""}
+            <div class="card-title">${CL.escapeHtml(m.title)}${
+              m.year ? ` <span class="card-meta">(${CL.escapeHtml(String(m.year))})</span>` : ""
+            }</div>
+            ${
+              mode === "watched" && yw
+                ? `<div class="card-meta">Watched ${CL.escapeHtml(String(yw))}</div>`
+                : ""
+            }
+            ${ratingHtml}
           </div>
         </div>
         ${m.review ? `<p class="review-text">“${CL.escapeHtml(m.review)}”</p>` : ""}
@@ -43,11 +94,38 @@
     `;
   }
 
+  function sortBarHtml(sortBy, tab) {
+    if (tab === "recs") return "";
+    return `
+      <div class="movies-sort-bar">
+        <label for="mv-sort">Sort</label>
+        <select id="mv-sort">
+          ${
+            tab === "watched"
+              ? `
+            <option value="rating" ${sortBy === "rating" ? "selected" : ""}>Ranking (highest first)</option>
+            <option value="title" ${sortBy === "title" ? "selected" : ""}>Title (A–Z)</option>
+            <option value="year" ${sortBy === "year" ? "selected" : ""}>Year watched</option>
+          `
+              : `
+            <option value="title" ${sortBy === "title" || sortBy === "rating" ? "selected" : ""}>Title (A–Z)</option>
+            <option value="year" ${sortBy === "year" ? "selected" : ""}>Year added</option>
+          `
+          }
+        </select>
+      </div>
+    `;
+  }
+
   function openMovieForm(existing, onSave) {
     const isEdit = !!existing;
+    const defaultWatchedYear =
+      existing?.watchedYear ||
+      (existing?.addedAt ? new Date(existing.addedAt).getFullYear() : new Date().getFullYear());
+
     CL.modal.open({
       title: isEdit ? "Edit movie" : "Add movie",
-      subtitle: "Ratings & reviews stay on this device",
+      subtitle: "Ratings can use decimals (4.5, 3.8). Syncs with Couple Group.",
       bodyHtml: `
         <div class="form-stack">
           <div class="field">
@@ -55,8 +133,10 @@
             <input id="mv-title" value="${CL.escapeHtml(existing?.title || "")}" placeholder="Movie title" required />
           </div>
           <div class="field">
-            <label>Year (optional)</label>
-            <input id="mv-year" type="number" inputmode="numeric" value="${CL.escapeHtml(existing?.year ? String(existing.year) : "")}" placeholder="e.g. 2023" />
+            <label>Release year (optional)</label>
+            <input id="mv-year" type="number" inputmode="numeric" value="${CL.escapeHtml(
+              existing?.year ? String(existing.year) : ""
+            )}" placeholder="e.g. 2023" />
           </div>
           <div class="field">
             <label>List</label>
@@ -64,6 +144,12 @@
               <option value="watched" ${!existing || existing._list !== "wishlist" ? "selected" : ""}>Watched</option>
               <option value="wishlist" ${existing?._list === "wishlist" ? "selected" : ""}>Wishlist</option>
             </select>
+          </div>
+          <div class="field" id="mv-watched-year-wrap">
+            <label>Year watched</label>
+            <input id="mv-watched-year" type="number" inputmode="numeric" min="1900" max="2100" value="${CL.escapeHtml(
+              String(defaultWatchedYear || "")
+            )}" placeholder="${new Date().getFullYear()}" />
           </div>
           <div class="field" id="mv-rating-wrap">
             <label>Rating</label>
@@ -80,8 +166,11 @@
         CL.rating.bindStars(body);
         const listEl = body.querySelector("#mv-list");
         const ratingWrap = body.querySelector("#mv-rating-wrap");
+        const watchedYearWrap = body.querySelector("#mv-watched-year-wrap");
         const sync = () => {
-          ratingWrap.style.display = listEl.value === "watched" ? "" : "none";
+          const watched = listEl.value === "watched";
+          ratingWrap.style.display = watched ? "" : "none";
+          watchedYearWrap.style.display = watched ? "" : "none";
         };
         listEl.addEventListener("change", sync);
         sync();
@@ -97,10 +186,16 @@
           const list = listEl.value;
           const rating = list === "watched" ? CL.rating.getStarValue(body, "movieRating") : 0;
           const review = body.querySelector("#mv-review").value.trim();
+          const wyRaw = body.querySelector("#mv-watched-year").value.trim();
+          let watchedYear = wyRaw ? Number(wyRaw) : null;
+          if (list === "watched" && (!watchedYear || Number.isNaN(watchedYear))) {
+            watchedYear = new Date().getFullYear();
+          }
           onSave({
             id: existing?.id || CL.uid("mv"),
             title,
             year: year && !Number.isNaN(year) ? year : null,
+            watchedYear: list === "watched" ? watchedYear : null,
             rating,
             review,
             list,
@@ -112,18 +207,34 @@
     });
   }
 
+  function moviePayload(movie, extras) {
+    extras = extras || {};
+    return {
+      id: movie.id,
+      title: movie.title,
+      year: movie.year,
+      watchedYear: movie.watchedYear != null ? movie.watchedYear : extras.watchedYear,
+      rating: movie.rating,
+      review: movie.review,
+      addedAt: extras.addedAt != null ? extras.addedAt : movie.addedAt
+    };
+  }
+
   function render(root) {
     let tab = CL.storage.get("moviesTab", "watched");
+    let sortBy = CL.storage.get(SORT_KEY, "rating");
 
     function paint() {
       const data = getData();
       const watched = data.watched || [];
       const wishlist = data.wishlist || [];
       const catalog = CL.data.movies || [];
-      const known = new Set(
-        [...watched, ...wishlist].map((m) => m.title.toLowerCase())
-      );
+      const known = new Set([...watched, ...wishlist].map((m) => m.title.toLowerCase()));
       const suggest = catalog.filter((m) => !known.has(m.title.toLowerCase()));
+
+      // Wishlist default sort title if rating sort selected
+      const effectiveSort =
+        tab === "wishlist" && sortBy === "rating" ? "title" : sortBy;
 
       root.innerHTML = `
         <section class="page">
@@ -131,7 +242,7 @@
             <h1 class="page-title" style="margin:0">Movies</h1>
             <button type="button" class="btn btn-primary btn-sm" id="mv-add">+ Add</button>
           </div>
-          <p class="page-sub">Track what you've watched, wishlist & get recs</p>
+          <p class="page-sub">Watched, wishlist, ratings &amp; Grok recs</p>
 
           <div class="tabs" role="tablist">
             <button type="button" class="tab ${tab === "watched" ? "active" : ""}" data-tab="watched">Watched (${watched.length})</button>
@@ -147,22 +258,27 @@
       const panel = root.querySelector("#mv-panel");
 
       if (tab === "watched") {
+        const sorted = sortMovies(watched, effectiveSort);
         panel.innerHTML = watched.length
-          ? `<div class="stack-sm">${watched
-              .slice()
-              .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0))
+          ? `${sortBarHtml(effectiveSort, tab)}<div class="stack-sm">${sorted
               .map((m) => movieCard(m, "watched"))
               .join("")}</div>`
           : `<div class="empty"><div class="emoji">🎬</div><p>No watched movies yet. Add your first date-night film.</p>
              <button type="button" class="btn btn-primary btn-sm" id="mv-add-empty">+ Add movie</button></div>`;
       } else if (tab === "wishlist") {
+        const sorted = sortMovies(wishlist, effectiveSort === "rating" ? "title" : effectiveSort);
         panel.innerHTML = wishlist.length
-          ? `<div class="stack-sm">${wishlist.map((m) => movieCard(m, "wish")).join("")}</div>`
+          ? `${sortBarHtml(effectiveSort === "rating" ? "title" : effectiveSort, tab)}<div class="stack-sm">${sorted
+              .map((m) => movieCard(m, "wish"))
+              .join("")}</div>`
           : `<div class="empty"><div class="emoji">✨</div><p>Wishlist is empty. Save something for next weekend.</p></div>`;
       } else {
         panel.innerHTML = `
           <p class="card-meta" style="margin-bottom:10px">From our seed catalog — add to wishlist or mark watched.</p>
-          <div class="stack-sm">${suggest.map(catalogCard).join("") || '<div class="empty"><p>You\'ve added everything in the starter list!</p></div>'}</div>
+          <div class="stack-sm">${
+            suggest.map(catalogCard).join("") ||
+            '<div class="empty"><p>You\'ve added everything in the starter list!</p></div>'
+          }</div>
         `;
       }
 
@@ -172,6 +288,12 @@
           CL.storage.set("moviesTab", tab);
           paint();
         });
+      });
+
+      panel.querySelector("#mv-sort")?.addEventListener("change", (e) => {
+        sortBy = e.target.value;
+        CL.storage.set(SORT_KEY, sortBy);
+        paint();
       });
 
       const addBtn = root.querySelector("#mv-add");
@@ -188,14 +310,7 @@
               addedAt: movie.addedAt
             });
           } else {
-            d.watched = (d.watched || []).concat({
-              id: movie.id,
-              title: movie.title,
-              year: movie.year,
-              rating: movie.rating,
-              review: movie.review,
-              addedAt: movie.addedAt
-            });
+            d.watched = (d.watched || []).concat(moviePayload(movie));
           }
           setData(d);
           tab = movie.list === "wishlist" ? "wishlist" : "watched";
@@ -226,14 +341,9 @@
           openMovieForm(
             Object.assign({}, item, { _list: "watched", rating: 0 }),
             (movie) => {
-              d.watched = (d.watched || []).concat({
-                id: movie.id,
-                title: movie.title,
-                year: movie.year,
-                rating: movie.rating,
-                review: movie.review,
-                addedAt: Date.now()
-              });
+              d.watched = (d.watched || []).concat(
+                moviePayload(movie, { addedAt: Date.now() })
+              );
               setData(d);
               tab = "watched";
               CL.storage.set("moviesTab", tab);
@@ -248,16 +358,7 @@
           if (!item) return;
           openMovieForm(Object.assign({}, item, { _list: "watched" }), (movie) => {
             d.watched = d.watched.map((m) =>
-              m.id === id
-                ? {
-                    id: movie.id,
-                    title: movie.title,
-                    year: movie.year,
-                    rating: movie.rating,
-                    review: movie.review,
-                    addedAt: m.addedAt
-                  }
-                : m
+              m.id === id ? moviePayload(movie, { addedAt: m.addedAt }) : m
             );
             setData(d);
             CL.toast("Updated");
@@ -290,14 +391,7 @@
             { title: item.title, year: item.year, _list: "watched", rating: 0, review: "" },
             (movie) => {
               const d = getData();
-              d.watched = (d.watched || []).concat({
-                id: movie.id,
-                title: movie.title,
-                year: movie.year,
-                rating: movie.rating,
-                review: movie.review,
-                addedAt: movie.addedAt
-              });
+              d.watched = (d.watched || []).concat(moviePayload(movie));
               setData(d);
               tab = "watched";
               CL.storage.set("moviesTab", tab);
@@ -312,7 +406,7 @@
         context: "movies",
         placeholder: "e.g. cozy romance after a long week",
         welcome:
-          "Ask for movie ideas based on what you've watched and rated. Try: “something feel-good” or “mind-bending sci-fi”."
+          "Ask for movie ideas based on what you've watched and rated (decimals welcome). Try: “something feel-good” or “mind-bending sci-fi”."
       });
     }
 

@@ -1,8 +1,9 @@
 # CL — Couple's Lifestyle App
 
-Mobile-friendly web app: home, food, movies, games, trips, op-eds, books, recipes.
+Mobile-friendly web app: home, food, movies, games, trips, books, recipes.
 
-**Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream (America 250)  
+**Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream  
+
 
 **Live deploy:** push to GitHub → Vercel auto-updates
 
@@ -23,19 +24,18 @@ Use **HTTPS / Vercel / localhost** so GPS works.
 |------|---------|
 | **Home** | Dashboard, names, quick links |
 | **Food** | Fast GPS, OpenStreetMap nearby places, filters, visits, **Ask Grok** |
-| **Movies** | Watched / wishlist / recs + **Ask Grok** |
+| **Movies** | Watched / wishlist / sort (rating, title, year) · decimal ratings · **Ask Grok** |
 | **Games** | Golf, Darts, Spades, Gin · scores + history (syncs) |
 | **8-Ball** | Under More · Magic 8-Ball |
 | **Trips** | NL plan + stay/eat/drink/do + **Ask Grok** (syncs) |
-| **Recipes** | Meal + drink + **Ask Grok** (syncs) |
+| **Recipes** | Meal + drink + custom recipes · **Ask Grok** (syncs) |
 | **Books** | Shelves + **Ask Grok** (syncs) |
-| **Boredom** | Daily short essays (full text in-app) + like/dislike (syncs) |
 | **Icons** | `icons/` + `manifest.json` PWA emblem |
 | **Profile** | Couple photo/names · **Couple Group sync** · xAI API key |
 
 ## Couple Group (shared sync)
 
-You and your partner share **movies, books, trips, games, Boredom likes, recipes, food notes, and profile names** in real time via free **Firebase Realtime Database**.
+You and your partner share **movies, books, trips, games, recipes, food notes, and profile names** in real time via free **Firebase Realtime Database**.
 
 ### One-time setup (either of you)
 

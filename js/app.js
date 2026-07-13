@@ -10,8 +10,6 @@
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
     more: { title: "More", nav: "more", render: () => renderMore },
     trips: { title: "Trips", nav: "more", render: () => CL.sections.trips.render },
-    opeds: { title: "Boredom", nav: "more", render: () => CL.sections.opeds.render },
-    boredom: { title: "Boredom", nav: "more", render: () => CL.sections.opeds.render },
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
     recipes: { title: "Recipes", nav: "more", render: () => CL.sections.recipes.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
@@ -38,7 +36,7 @@
       mark.innerHTML = `<img src="${p.avatar}" alt="" class="header-avatar-img" />`;
       mark.classList.add("has-photo");
     } else {
-      // Default emblem — psychedelic America 250 icon
+      // Default emblem icon
       mark.innerHTML = `<img src="icons/icon-96.png" alt="" class="header-avatar-img" />`;
       mark.classList.add("has-photo");
     }
@@ -62,12 +60,6 @@
             <span class="emoji">🧳</span>
             <strong>Trips Planner</strong>
             <p>Destinations, lodging & food ideas</p>
-            <span class="badge">Open</span>
-          </button>
-          <button type="button" class="more-card" data-go="boredom">
-            <span class="emoji">📖</span>
-            <strong>Boredom</strong>
-            <p>Short daily essays · like what you love</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="books">
