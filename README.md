@@ -2,7 +2,8 @@
 
 Mobile-friendly web app: home, food, movies, games, trips, op-eds, books, recipes.
 
-**Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · pink + soft green  
+**Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream (America 250)  
+
 **Live deploy:** push to GitHub → Vercel auto-updates
 
 ## Open
@@ -28,12 +29,13 @@ Use **HTTPS / Vercel / localhost** so GPS works.
 | **Trips** | NL plan + stay/eat/drink/do + **Ask Grok** (syncs) |
 | **Recipes** | Meal + drink + **Ask Grok** (syncs) |
 | **Books** | Shelves + **Ask Grok** (syncs) |
-| **OpEds** | Live opinion RSS + like/dislike ranking (syncs) |
+| **Boredom** | Daily short essays (full text in-app) + like/dislike (syncs) |
+| **Icons** | `icons/` + `manifest.json` PWA emblem |
 | **Profile** | Couple photo/names · **Couple Group sync** · xAI API key |
 
 ## Couple Group (shared sync)
 
-You and your partner share **movies, books, trips, games, OpEds, recipes, food notes, and profile names** in real time via free **Firebase Realtime Database**.
+You and your partner share **movies, books, trips, games, Boredom likes, recipes, food notes, and profile names** in real time via free **Firebase Realtime Database**.
 
 ### One-time setup (either of you)
 

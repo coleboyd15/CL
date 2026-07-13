@@ -15,10 +15,13 @@
       root.innerHTML = `
         <section class="page home-page">
           <div class="home-hero card">
+            <div class="home-emblem-wrap">
+              <img src="icons/icon-192.png" alt="CL emblem" class="home-emblem" width="96" height="96" />
+            </div>
             <div class="home-hero-top">
               ${CL.profile.avatarHtml("avatar-lg")}
               <div class="home-hero-text">
-                <p class="home-kicker">CL</p>
+                <p class="home-kicker">CL · America 250</p>
                 <h1 class="page-title home-title">${welcomeLine}</h1>
                 <p class="page-sub" style="margin-bottom:0">
                   ${
@@ -99,10 +102,10 @@
                 <strong>Recipes</strong>
                 <span>Cook together</span>
               </a>
-              <a href="#opeds" class="quick-card">
-                <span class="emoji">📰</span>
-                <strong>OpEds</strong>
-                <span>Live opinion picks</span>
+              <a href="#boredom" class="quick-card">
+                <span class="emoji">📖</span>
+                <strong>Boredom</strong>
+                <span>Daily short essays</span>
               </a>
               <a href="#profile" class="quick-card">
                 <span class="emoji">💕</span>

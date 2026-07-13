@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 249, 247, 0.85);
+  background: rgba(250, 248, 245, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }

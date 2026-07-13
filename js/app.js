@@ -10,7 +10,8 @@
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
     more: { title: "More", nav: "more", render: () => renderMore },
     trips: { title: "Trips", nav: "more", render: () => CL.sections.trips.render },
-    opeds: { title: "OpEds", nav: "more", render: () => CL.sections.opeds.render },
+    opeds: { title: "Boredom", nav: "more", render: () => CL.sections.opeds.render },
+    boredom: { title: "Boredom", nav: "more", render: () => CL.sections.opeds.render },
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
     recipes: { title: "Recipes", nav: "more", render: () => CL.sections.recipes.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
@@ -37,8 +38,9 @@
       mark.innerHTML = `<img src="${p.avatar}" alt="" class="header-avatar-img" />`;
       mark.classList.add("has-photo");
     } else {
-      mark.textContent = "CL";
-      mark.classList.remove("has-photo");
+      // Default emblem — psychedelic America 250 icon
+      mark.innerHTML = `<img src="icons/icon-96.png" alt="" class="header-avatar-img" />`;
+      mark.classList.add("has-photo");
     }
   }
 
@@ -62,10 +64,10 @@
             <p>Destinations, lodging & food ideas</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="opeds">
-            <span class="emoji">📰</span>
-            <strong>Today's OpEds</strong>
-            <p>Opinion picks with like/dislike</p>
+          <button type="button" class="more-card" data-go="boredom">
+            <span class="emoji">📖</span>
+            <strong>Boredom</strong>
+            <p>Short daily essays · like what you love</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="books">

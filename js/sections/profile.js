@@ -46,7 +46,7 @@
       <div class="card section-block couple-group-card">
         <div class="section-label">Couple Group</div>
         <p class="card-meta" style="margin-bottom:10px">
-          Share movies, books, trips, games, OpEds, recipes & food notes in real time.
+          Share movies, books, trips, games, Boredom likes, recipes & food notes in real time.
           Free Firebase Realtime Database · both of you use the same code.
         </p>
         <p class="sync-status ${badge.cls}">
