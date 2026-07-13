@@ -704,7 +704,7 @@
 .game-standings-head,
 .game-standings-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) 2rem 2rem 2.6rem 2.8rem;
+  grid-template-columns: minmax(0, 1.8fr) 2.2rem 2.2rem 3rem;
   gap: 6px;
   align-items: center;
   padding: 10px 4px;

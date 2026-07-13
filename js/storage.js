@@ -2,7 +2,11 @@
 (function (global) {
   const PREFIX = "cl_";
 
-  /** Keys that sync across couple devices when a group is joined */
+  /**
+   * Keys that sync across couple devices when a group is joined.
+   * App updates never wipe these — they live in localStorage (and Firebase when linked).
+   * Includes: game scores/history, recipes (custom + favorites), movies, books, trips, opeds, places, profile names.
+   */
   const SYNC_KEYS = [
     "movies",
     "books",

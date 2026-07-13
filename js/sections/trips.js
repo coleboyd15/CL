@@ -226,7 +226,7 @@
           try {
             const system =
               CL.chat.buildSystemPrompt("trips", {}) +
-              "\n\nRespond with a clear couple weekend itinerary. Use markdown-ish sections exactly titled: STAY, EAT, DRINK, DO. Under each, 2–4 specific bullets (named hotels/areas, restaurants, bars, activities). Be concrete and romantic but practical.";
+              "\n\nThink step-by-step about season, pace, and romance for this couple, then respond with a clear weekend itinerary. Use sections exactly titled: STAY, EAT, DRINK, DO. Under each, 2–4 specific bullets (named hotels/areas, restaurants, bars, activities). Be concrete and practical — not generic.";
             const res = await fetch("https://api.x.ai/v1/chat/completions", {
               method: "POST",
               headers: {
@@ -239,8 +239,8 @@
                   { role: "system", content: system },
                   { role: "user", content: prompt }
                 ],
-                temperature: 0.7,
-                max_tokens: 1200
+                temperature: 0.6,
+                max_tokens: 2200
               })
             });
             if (!res.ok) throw new Error("API " + res.status);

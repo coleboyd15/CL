@@ -7,13 +7,14 @@
     const context = options.context || "general";
     const settings = CL.profile.getSettings();
     const hasKey = !!(settings.xaiApiKey || "").trim() && settings.useGrokApi !== false;
-    const modeLabel = hasKey ? "Live Grok" : "Offline mode";
+    const model = CL.profile.getGrokModel ? CL.profile.getGrokModel() : "grok-4.5";
+    const modeLabel = hasKey ? "Live · " + model : "Offline mode";
 
     const welcome =
       options.welcome ||
       (hasKey
-        ? "Hi — I'm Grok. Ask me anything; I can interview you about dinner and then recommend a place."
-        : "Hi — offline Grok helper. Add an xAI API key in Profile for live chat. I can still recommend from your CL data.");
+        ? "Hi — live Grok is on. I’ll think through your request and personalize for you two. Ask anything."
+        : "Hi — offline helper. Add an xAI API key in Profile for live Grok (default grok-4.5). I can still use your CL data.");
 
     const panel = document.createElement("div");
     panel.className = "chat-panel";
@@ -21,7 +22,7 @@
       <div class="chat-header" role="button" tabindex="0" aria-expanded="false">
         <div>
           <strong>✦ Ask Grok</strong>
-          <div><span>${CL.escapeHtml(modeLabel)} · natural conversation</span></div>
+          <div><span>${CL.escapeHtml(modeLabel)}</span></div>
         </div>
         <span class="chat-toggle">▼</span>
       </div>
@@ -77,7 +78,7 @@
       addMsg(text, "user");
       history.push({ role: "user", content: text });
 
-      const typing = addMsg("Thinking…", "bot typing");
+      const typing = addMsg(hasKey ? "Thinking step-by-step…" : "Thinking…", "bot typing");
       try {
         const reply = await respond(history, context, options);
         typing.remove();
@@ -104,35 +105,59 @@
     const names = CL.profile.displayNames();
     const profile = CL.profile.get();
     const loc = CL.geo.getSavedLocation();
+    const model = CL.profile.getGrokModel ? CL.profile.getGrokModel() : "grok-4.5";
+
     const parts = [
-      `You are Grok, embedded in CL — a private couple app for ${names.myName} and ${names.partnerName}.`,
-      "Be warm, concise, and playful. Prefer short paragraphs. When recommending, give 1–3 concrete options with why.",
-      "You can ask clarifying questions first (preferences, vibe, budget, dietary needs) before recommending — multi-turn is encouraged.",
-      "Never invent that you checked live maps unless given location context below."
+      `You are Grok (${model}), the intelligent assistant inside CL — a private couple lifestyle app for ${names.myName} and ${names.partnerName}.`,
+      [
+        "CORE BEHAVIOR:",
+        "- You are LIVE and knowledgeable. Give thoughtful, specific answers — never generic filler or vague chit-chat.",
+        "- Think step-by-step privately, then answer clearly. For complex asks, briefly show your reasoning (2–4 short bullets) then the recommendation.",
+        "- Personalize using their names, city, bio, saved lists, location, and chat history in this thread.",
+        "- Prefer concrete names, places, dishes, titles, and next steps over abstract advice.",
+        "- When recommending, give 1–3 ranked options with why each fits THIS couple.",
+        "- Ask clarifying questions only when needed (missing budget/vibe/diet/mood); otherwise decide and deliver.",
+        "- Warm, witty, and practical — not corporate or robotic.",
+        "- Never claim you browsed live maps or the web unless tools are provided; use the app context below as ground truth.",
+        "- Multi-turn: remember earlier answers in this conversation."
+      ].join("\n")
     ];
 
-    if (profile.city) parts.push(`They often hang around: ${profile.city}.`);
-    if (profile.bio) parts.push(`About them: ${profile.bio}`);
+    const about = [];
+    about.push(`Couple: ${names.myName} & ${names.partnerName}` + (profile.coupleName ? ` (“${profile.coupleName}”)` : ""));
+    if (profile.city) about.push(`Home / hangouts: ${profile.city}`);
+    if (profile.anniversary) about.push(`Together since: ${profile.anniversary}`);
+    if (profile.bio) about.push(`About them: ${profile.bio}`);
     if (loc) {
-      parts.push(
-        `User GPS roughly: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}. Prefer nearby options when relevant.`
+      about.push(
+        `GPS (approx): ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)} — prefer nearby when relevant.`
       );
     }
+    if (CL.sync && CL.sync.isJoined && CL.sync.isJoined()) {
+      const g = CL.sync.getGroup();
+      about.push(`Shared couple group active${g && g.code ? " (" + g.code + ")" : ""} — data may be shared.`);
+    }
+    parts.push("COUPLE CONTEXT:\n" + about.join("\n"));
 
     if (context === "food") {
       const raw = (CL.geo.getActivePlaces && CL.geo.getActivePlaces()) || CL.data.places || [];
       const catalog = CL.geo.placesWithDistance(raw, loc);
       const state = CL.storage.get("places", {});
-      const lines = catalog.map((p) => {
+      const lines = catalog.slice(0, 50).map((p) => {
         const s = state[p.id] || {};
         return `- ${p.name} | ${p.type} | ${p.cuisine} | ${p.area} | walk ${p.walk}/5 quality ${p.quality}/5 vibe ${p.vibe}/5 price ${p.price}/5 | ${p.distanceLabel || "distance unknown"} | ${p.blurb}${s.visited ? " | VISITED" : ""}${s.wishlist ? " | WISHLIST" : ""}${s.rating ? ` | rating ${s.rating}/5` : ""}${s.notes ? ` | notes: ${s.notes}` : ""}`;
       });
       const live = raw.some((p) => p.source === "osm");
       parts.push(
-        live
-          ? "FOOD MODE: Recommend only from this catalog of real nearby places (OpenStreetMap near their GPS). You may interview them about dinner first, then pick."
-          : "FOOD MODE: Recommend only from this catalog (venues near their GPS when location is on). You may interview them about dinner first, then pick.",
-        "Catalog:\n" + lines.join("\n")
+        [
+          "FOOD MODE:",
+          live
+            ? "Recommend primarily from this real nearby catalog (OpenStreetMap near their GPS)."
+            : "Recommend from this catalog (venues relative to their GPS when location is on).",
+          "Interview lightly if craving/budget/walkability is unclear, then pick with distances and vibe scores.",
+          "Honor wishlist/visited notes. Suggest a plan (when to go, what to order) when helpful.",
+          "Catalog:\n" + (lines.join("\n") || "(empty — invent sensible local-style ideas and say catalog was empty)")
+        ].join("\n")
       );
     }
 
@@ -140,45 +165,64 @@
       const data = CL.storage.get("movies", { watched: [], wishlist: [] });
       const catalog = CL.data.movies || [];
       parts.push(
-        "MOVIES MODE: Use their history + catalog. Interview about mood if helpful.",
-        "Watched: " + JSON.stringify(data.watched || []),
-        "Wishlist: " + JSON.stringify(data.wishlist || []),
-        "Catalog: " + JSON.stringify(catalog)
+        [
+          "MOVIES MODE: Personalize picks from their history + catalog. Consider mood, length, and couple-watch vibes.",
+          "Watched: " + JSON.stringify(data.watched || []),
+          "Wishlist: " + JSON.stringify(data.wishlist || []),
+          "Catalog: " + JSON.stringify(catalog)
+        ].join("\n")
       );
     }
 
     if (context === "books") {
       const data = CL.storage.get("books", { read: [], current: [], wishlist: [] });
       parts.push(
-        "BOOKS MODE: Recommend based on shelves; suggest couple-friendly reads.",
-        "Shelves: " + JSON.stringify(data)
+        [
+          "BOOKS MODE: Recommend couple-friendly or complementary reads using their shelves.",
+          "Shelves: " + JSON.stringify(data)
+        ].join("\n")
       );
     }
 
     if (context === "trips") {
       const trips = CL.storage.get("trips", []);
       parts.push(
-        "TRIPS MODE: You are a couple travel planner. For requests like “Plan a weekend in Paris for us”, produce a practical romantic itinerary.",
-        "Always structure with sections titled exactly: STAY, EAT, DRINK, DO.",
-        "Under STAY: 2–3 specific hotels, boutique stays, or Airbnb-style neighborhood suggestions with why.",
-        "Under EAT: restaurants/cafés. Under DRINK: bars/wine/coffee. Under DO: activities.",
-        "Be concrete (named places or well-known areas). Mention budget tiers when helpful.",
-        "Saved trips so far: " + JSON.stringify(
-          (trips || []).map((t) => ({ destination: t.destination, dates: t.dates }))
-        )
+        [
+          "TRIPS MODE: Couple travel planner. For “Plan a weekend in X”, produce a practical romantic itinerary.",
+          "Always structure with sections titled exactly: STAY, EAT, DRINK, DO.",
+          "Under STAY: 2–3 specific hotels/neighborhoods with why. EAT: restaurants/cafés. DRINK: bars/wine/coffee. DO: activities.",
+          "Be concrete; mention budget tiers when helpful.",
+          "Saved trips: " +
+            JSON.stringify((trips || []).map((t) => ({ destination: t.destination, dates: t.dates })))
+        ].join("\n")
       );
     }
 
     if (context === "recipes") {
       const catalog = CL.data.recipes || [];
       const saved = CL.storage.get("recipes", []);
+      const customNames = (saved || [])
+        .filter((r) => r.custom)
+        .map((r) => r.meal || r.drink || r.name)
+        .slice(0, 20);
       parts.push(
-        "RECIPES MODE: Create complete meal + matching drink recipes for a couple.",
-        "Always include: dish name, drink name, servings, time, meal ingredients (bullets), meal steps (numbered), drink ingredients, drink steps.",
-        "Respect dietary constraints and cuisine requests (e.g. Italian dinner + cocktail).",
-        "You may reference the in-app catalog for inspiration, but original recipes are welcome.",
-        "Catalog titles: " + catalog.map((r) => r.nationality + ": " + r.meal + " + " + r.drink).join(" | "),
-        "User saved favorites count: " + (saved || []).length
+        [
+          "RECIPES MODE: Create complete, cookable recipes for a couple (scaled servings).",
+          "Always include: dish name, matching drink (unless they ask meal-only or drink-only), servings, time, meal ingredients, numbered meal steps, drink ingredients, drink steps.",
+          "Respect dietary constraints, skill level, and time limits. Original recipes welcome.",
+          "Catalog inspiration: " +
+            catalog.map((r) => r.nationality + ": " + r.meal + " + " + r.drink).join(" | "),
+          "Their saved/custom recipes: " +
+            JSON.stringify(
+              (saved || []).slice(0, 15).map((r) => ({
+                meal: r.meal,
+                drink: r.drink,
+                custom: !!r.custom,
+                category: r.category
+              }))
+            ),
+          customNames.length ? "Custom titles: " + customNames.join(", ") : ""
+        ].join("\n")
       );
     }
 
@@ -215,9 +259,30 @@
 
   async function callXai(apiKey, model, history, context, options) {
     const system = buildSystemPrompt(context, options);
+    // Keep last ~20 turns so long chats stay coherent without blowing context
+    const trimmed = history.length > 24 ? history.slice(-24) : history;
     const messages = [{ role: "system", content: system }].concat(
-      history.map((m) => ({ role: m.role, content: m.content }))
+      trimmed.map((m) => ({ role: m.role, content: m.content }))
     );
+
+    const maxTokens =
+      context === "trips" || context === "recipes"
+        ? 2200
+        : context === "food"
+          ? 1400
+          : 1200;
+
+    const body = {
+      model: model,
+      messages: messages,
+      temperature: 0.65,
+      max_tokens: maxTokens
+    };
+
+    // Reasoning-capable models: ask for a bit more deliberate thought when supported
+    if (/grok-4\.5|reasoning|grok-4\.20/i.test(model)) {
+      body.temperature = 0.6;
+    }
 
     const res = await fetch(API_URL, {
       method: "POST",
@@ -225,12 +290,7 @@
         "Content-Type": "application/json",
         Authorization: "Bearer " + apiKey
       },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: context === "trips" || context === "recipes" ? 1400 : 900
-      })
+      body: JSON.stringify(body)
     });
 
     if (!res.ok) {
@@ -241,13 +301,25 @@
       } catch {
         /* ignore */
       }
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("API key rejected — check your xAI key in Profile.");
+      }
+      if (res.status === 404 || /model/i.test(String(detail))) {
+        throw new Error(
+          `Model “${model}” failed (${detail}). Try another model in Profile → Grok model.`
+        );
+      }
       throw new Error(detail || `HTTP ${res.status}`);
     }
 
     const data = await res.json();
-    const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    if (!content) throw new Error("Empty response from Grok");
-    return content.trim();
+    const choice = data.choices && data.choices[0];
+    const content =
+      (choice && choice.message && choice.message.content) ||
+      (choice && choice.text) ||
+      "";
+    if (!String(content).trim()) throw new Error("Empty response from Grok");
+    return String(content).trim();
   }
 
   function lastUserText(history) {

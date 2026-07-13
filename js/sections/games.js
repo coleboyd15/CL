@@ -107,7 +107,33 @@
         ...r,
         winPct: r.played ? Math.round((r.wins / r.played) * 1000) / 10 : 0
       }))
-      .sort((a, b) => b.wins - a.wins || b.winPct - a.winPct || b.points - a.points);
+      // Rank by wins, then win rate, then games played — not raw points (games scoring differs)
+      .sort((a, b) => b.wins - a.wins || b.winPct - a.winPct || b.played - a.played);
+  }
+
+  /** Neutral match result — not phrased from one person's POV */
+  function matchResultLabel(h) {
+    const winner = String(h.winner || "").trim();
+    const loser = String(h.loser || "").trim();
+    const names = (h.final || [])
+      .map((p) => String(p.name || "").trim())
+      .filter(Boolean);
+
+    if (winner && loser && nameKey(winner) !== nameKey(loser)) {
+      return winner + " won against " + loser;
+    }
+    if (winner) {
+      const opp = names.find((n) => nameKey(n) !== nameKey(winner));
+      if (opp) return winner + " won against " + opp;
+      return "Winner: " + winner;
+    }
+    if (loser) {
+      const opp = names.find((n) => nameKey(n) !== nameKey(loser));
+      if (opp) return opp + " won against " + loser;
+      return "Lost: " + loser;
+    }
+    if (names.length >= 2) return names.join(" vs ");
+    return "Finished";
   }
 
   function leaderboardHtml(players, opts) {
@@ -171,17 +197,13 @@
             const scores = (h.final || [])
               .map((p) => `${p.name}: ${p.total}`)
               .join(" · ");
-            const resultLabel = h.loser
-              ? "Lost: " + h.loser
-              : h.winner
-                ? "Won: " + h.winner
-                : "—";
+            const resultLabel = matchResultLabel(h);
             return `
               <article class="card game-history-card">
                 <div class="row-between">
                   <div class="card-title" style="font-size:0.95rem">${meta.emoji} ${CL.escapeHtml(meta.name)}</div>
-                  <span class="tag ${h.loser ? "wish" : ""}">${CL.escapeHtml(resultLabel)}</span>
                 </div>
+                <div class="card-meta" style="font-weight:600;color:var(--text)">${CL.escapeHtml(resultLabel)}</div>
                 <div class="card-meta">${CL.escapeHtml(scores)}</div>
                 <div class="card-meta">${CL.escapeHtml(when)}</div>
               </article>`;
@@ -204,7 +226,6 @@
           <span>W</span>
           <span>L</span>
           <span>Win%</span>
-          <span>Pts</span>
         </div>
         ${rows
           .map((r, i) => {
@@ -219,7 +240,6 @@
               <span class="game-stat-w">${r.wins}</span>
               <span>${r.losses}</span>
               <span>${r.winPct}%</span>
-              <span class="game-stat-pts">${r.points}</span>
             </div>`;
           })
           .join("")}
@@ -241,7 +261,7 @@
                 ...(s.byGame[type] || { played: 0, wins: 0, losses: 0, points: 0 })
               }))
               .filter((p) => p.played > 0)
-              .sort((a, b) => b.wins - a.wins || b.points - a.points);
+              .sort((a, b) => b.wins - a.wins || b.played - a.played);
             if (!players.length) {
               return `
                 <div class="card game-history-card">
@@ -259,7 +279,7 @@
                       return `
                         <div class="game-bygame-row">
                           <span>${CL.escapeHtml(p.name)}</span>
-                          <span class="card-meta">${p.wins}W · ${pct}% · ${p.points} pts</span>
+                          <span class="card-meta">${p.wins}W · ${p.losses}L · ${pct}%</span>
                         </div>`;
                     })
                     .join("")}
@@ -869,8 +889,8 @@
           <button type="button" class="btn btn-ghost btn-sm" id="g-back-hub">← Games</button>
           <h1 class="page-title">📊 Stats & History</h1>
           <p class="page-sub">
-            ${history.length} match${history.length === 1 ? "" : "es"} saved on this device
-            · persists after close
+            ${history.length} match${history.length === 1 ? "" : "es"} saved
+            · localStorage${CL.sync && CL.sync.isJoined && CL.sync.isJoined() ? " + Couple Group sync" : ""}
           </p>
 
           <div class="section-block">
@@ -878,7 +898,7 @@
             <div class="card">
               ${standingsHtml(stats)}
               <p class="filter-hint" style="margin:10px 0 0">
-                Wins and points accumulate from every finished Golf, Darts, Spades, and Gin match.
+                Ranked by wins (then win %). Points are omitted because games score differently.
               </p>
             </div>
           </div>
