@@ -27,7 +27,7 @@
                   ${
                     profile.coupleName
                       ? CL.escapeHtml(profile.coupleName)
-                      : "Food, films, trips, recipes & more"
+                      : "Food, films, notes, recipes & more"
                   }
                   ${profile.anniversary ? ` · since ${CL.escapeHtml(profile.anniversary)}` : ""}
                 </p>
@@ -87,10 +87,10 @@
                 <strong>8-Ball</strong>
                 <span>Yes or no</span>
               </a>
-              <a href="#trips" class="quick-card">
-                <span class="emoji">🧳</span>
-                <strong>Trips</strong>
-                <span>Plan away</span>
+              <a href="#notes" class="quick-card">
+                <span class="emoji">📝</span>
+                <strong>Notes</strong>
+                <span>Shared scratch pad</span>
               </a>
               <a href="#books" class="quick-card">
                 <span class="emoji">📚</span>
@@ -121,9 +121,9 @@
                 <strong>Movie night?</strong>
                 <p class="card-meta">Check wishlist or get a recommendation</p>
               </button>
-              <button type="button" class="card home-action" data-go="trips">
-                <strong>Plan a trip</strong>
-                <p class="card-meta">Ask Grok for stay, food, drinks & activities</p>
+              <button type="button" class="card home-action" data-go="notes">
+                <strong>Jot a note</strong>
+                <p class="card-meta">Shared scratch paper — both of you can edit</p>
               </button>
               <button type="button" class="card home-action" data-go="games">
                 <strong>Play a game</strong>

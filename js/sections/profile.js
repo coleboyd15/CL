@@ -46,7 +46,7 @@
       <div class="card section-block couple-group-card">
         <div class="section-label">Couple Group</div>
         <p class="card-meta" style="margin-bottom:10px">
-          Share movies, books, trips, games, recipes & food notes in real time.
+          Share movies, books, notes, games, recipes & food places in real time.
           Free Firebase Realtime Database · both of you use the same code.
         </p>
         <p class="sync-status ${badge.cls}">
@@ -306,7 +306,7 @@
               </div>
               <p class="filter-hint" style="margin-top:-4px">
                 Active: <strong class="mono">${CL.escapeHtml(CL.profile.getGrokModel())}</strong>
-                · used by Food, Movies, Trips, Recipes, Books &amp; more
+                · used by Food, Movies, Recipes, Books &amp; more
               </p>
               <div class="toggle-row">
                 <span>Use live API when key is set</span>

@@ -9,7 +9,7 @@
     games: { title: "Games", nav: "games", render: () => CL.sections.games.render },
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
     more: { title: "More", nav: "more", render: () => renderMore },
-    trips: { title: "Trips", nav: "more", render: () => CL.sections.trips.render },
+    notes: { title: "Notes", nav: "more", render: () => CL.sections.notes.render },
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
     recipes: { title: "Recipes", nav: "more", render: () => CL.sections.recipes.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
@@ -56,10 +56,10 @@
             <p>Names, couple group, Grok API</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="trips">
-            <span class="emoji">🧳</span>
-            <strong>Trips Planner</strong>
-            <p>Destinations, lodging & food ideas</p>
+          <button type="button" class="more-card" data-go="notes">
+            <span class="emoji">📝</span>
+            <strong>Notes</strong>
+            <p>Shared scratch paper · rich text</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="books">
@@ -155,9 +155,11 @@
       if (!k) return;
       clearTimeout(syncRefreshTimer);
       syncRefreshTimer = setTimeout(() => {
-        // Don't yank focus while typing in a field
-        const tag = (document.activeElement && document.activeElement.tagName) || "";
+        // Don't yank focus while typing / editing notes
+        const ae = document.activeElement;
+        const tag = (ae && ae.tagName) || "";
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (ae && ae.isContentEditable) return;
         route();
       }, 400);
     });

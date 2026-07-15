@@ -1,6 +1,6 @@
 # CL — Couple's Lifestyle App
 
-Mobile-friendly web app: home, food, movies, games, trips, books, recipes.
+Mobile-friendly web app: home, food, movies, games, notes, books, recipes.
 
 **Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream  
 
@@ -27,7 +27,7 @@ Use **HTTPS / Vercel / localhost** so GPS works.
 | **Movies** | Watched / wishlist / sort (rating, title, year) · decimal ratings · **Ask Grok** |
 | **Games** | Golf, Darts, Spades, Gin · scores + history (syncs) |
 | **8-Ball** | Under More · Magic 8-Ball |
-| **Trips** | NL plan + stay/eat/drink/do + **Ask Grok** (syncs) |
+| **Notes** | Shared scratch-paper notes · rich text · Couple Group sync |
 | **Recipes** | Meal + drink + custom recipes · **Ask Grok** (syncs) |
 | **Books** | Shelves + **Ask Grok** (syncs) |
 | **Icons** | `icons/` + `manifest.json` PWA emblem |
@@ -35,7 +35,7 @@ Use **HTTPS / Vercel / localhost** so GPS works.
 
 ## Couple Group (shared sync)
 
-You and your partner share **movies, books, trips, games, recipes, food notes, and profile names** in real time via free **Firebase Realtime Database**.
+You and your partner share **movies, books, notes, games, recipes, food places, and profile names** in real time via free **Firebase Realtime Database**.
 
 ### One-time setup (either of you)
 
@@ -76,7 +76,8 @@ Optional: copy `js/firebase-config.example.js` → `js/firebase-config.js` with 
 1. Get a key at [console.x.ai](https://console.x.ai/)
 2. **Profile → xAI API key** → save  
 3. **Profile → Grok model** — default is **grok-4.5** (also grok-4.3, grok-build, legacy options)  
-4. Use **Ask Grok** on Food, Movies, Trips, Recipes, Books — all use the selected model  
+4. Use **Ask Grok** on Food, Movies, Recipes, Books — all use the selected model  
+
 
 Without a key, smart offline mode still works.
 

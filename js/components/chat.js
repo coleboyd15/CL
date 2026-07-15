@@ -184,20 +184,6 @@
       );
     }
 
-    if (context === "trips") {
-      const trips = CL.storage.get("trips", []);
-      parts.push(
-        [
-          "TRIPS MODE: Couple travel planner. For “Plan a weekend in X”, produce a practical romantic itinerary.",
-          "Always structure with sections titled exactly: STAY, EAT, DRINK, DO.",
-          "Under STAY: 2–3 specific hotels/neighborhoods with why. EAT: restaurants/cafés. DRINK: bars/wine/coffee. DO: activities.",
-          "Be concrete; mention budget tiers when helpful.",
-          "Saved trips: " +
-            JSON.stringify((trips || []).map((t) => ({ destination: t.destination, dates: t.dates })))
-        ].join("\n")
-      );
-    }
-
     if (context === "recipes") {
       const catalog = CL.data.recipes || [];
       const saved = CL.storage.get("recipes", []);
@@ -266,11 +252,7 @@
     );
 
     const maxTokens =
-      context === "trips" || context === "recipes"
-        ? 2200
-        : context === "food"
-          ? 1400
-          : 1200;
+      context === "recipes" ? 2200 : context === "food" ? 1400 : 1200;
 
     const body = {
       model: model,
@@ -349,7 +331,6 @@
     }
     if (context === "movies") return moviesReply(q);
     if (context === "books") return booksReply(q);
-    if (context === "trips") return tripsReply(q, history);
     if (context === "recipes") return recipesReply(q, history);
     return generalReply(q);
   }
@@ -481,29 +462,6 @@
     return intro + "\n\n" + picks.map((r, i) => `${i + 1}. ${r.title} — ${r.why}`).join("\n\n");
   }
 
-  function tripsReply(q) {
-    const names = CL.profile.displayNames();
-    let dest = q
-      .replace(/plan\s+(a\s+)?/gi, " ")
-      .replace(/weekend|trip|getaway|for us|please|in|to/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!dest || dest.length < 2) dest = "your destination";
-    const ideas = (CL.data.ideasForTrip || (() => CL.data.tripIdeas.default))(q);
-    const block = (title, arr) => title + "\n" + (arr || []).map((x) => "• " + x).join("\n");
-    return (
-      `Here's an offline starter plan for ${names.myName} & ${names.partnerName} (${dest}):\n\n` +
-      block("STAY", ideas.lodging) +
-      "\n\n" +
-      block("EAT", ideas.food) +
-      "\n\n" +
-      block("DRINK", ideas.drinks) +
-      "\n\n" +
-      block("DO", ideas.activities) +
-      "\n\nAdd an xAI API key in Profile for richer live Grok itineraries. You can also use the “Plan with Grok” box and Save as trip."
-    );
-  }
-
   function recipesReply(q) {
     const catalog = CL.data.recipes || [];
     let pool = catalog.slice();
@@ -539,9 +497,9 @@
   function generalReply(q) {
     if (/hello|hi |hey/.test(q)) {
       const n = CL.profile.displayNames();
-      return `Hey ${n.myName} & ${n.partnerName} 👋 What are we planning — dinner, a movie, a trip, or something to cook?`;
+      return `Hey ${n.myName} & ${n.partnerName} 👋 What are we planning — dinner, a movie, notes, or something to cook?`;
     }
-    return "Open Food, Movies, Trips, Recipes, or Books for context-aware recs — or add an xAI API key in Profile for full live Grok chats.";
+    return "Open Food, Movies, Recipes, or Books for context-aware recs — or add an xAI API key in Profile for full live Grok chats.";
   }
 
   global.CL = global.CL || {};

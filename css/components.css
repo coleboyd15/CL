@@ -429,8 +429,7 @@
 }
 
 .recipe-list,
-.recipe-steps,
-.trip-list {
+.recipe-steps {
   margin: 6px 0 10px;
   padding-left: 1.15rem;
   font-size: 0.88rem;
@@ -439,54 +438,242 @@
 
 .recipe-list { list-style: disc; }
 .recipe-steps { list-style: decimal; }
-.trip-list {
-  list-style: disc;
-  color: var(--text-muted);
-}
 
 .recipe-list li,
-.recipe-steps li,
-.trip-list li {
+.recipe-steps li {
   margin-bottom: 4px;
   line-height: 1.4;
 }
 
-/* Trips */
-.plan-prompt-card {
-  background: linear-gradient(145deg, rgba(250, 218, 221, 0.4), rgba(184, 224, 210, 0.35));
-}
-
-.trip-pre {
-  white-space: pre-wrap;
-  font-family: var(--font);
-  font-size: 0.85rem;
-  line-height: 1.45;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  max-height: 320px;
-  overflow: auto;
-  margin-top: 8px;
-}
-
-.trip-details {
-  margin-top: 10px;
-  font-size: 0.85rem;
-}
-
-.trip-details summary {
-  cursor: pointer;
-  font-weight: 700;
-  color: var(--green-500);
-}
-
-.trip-nl-result {
-  margin-top: 12px;
-}
-
 .brand-text span {
   display: none;
+}
+
+/* Notes — scratch paper */
+.notes-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 520px) {
+  .notes-layout {
+    grid-template-columns: 140px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.notes-list-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+@media (min-width: 520px) {
+  .notes-list-panel {
+    max-height: min(70vh, 560px);
+  }
+}
+
+.note-list-item {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.note-list-item.active {
+  border-color: var(--navy-300);
+  background: linear-gradient(135deg, rgba(178, 34, 52, 0.06), rgba(10, 49, 97, 0.08));
+  box-shadow: var(--shadow-sm);
+}
+
+.note-list-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-list-preview {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-list-meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.notes-empty-list {
+  padding: 8px;
+}
+
+.notes-paper {
+  background-color: #f7f1e3;
+  background-image:
+    linear-gradient(rgba(178, 34, 52, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 49, 97, 0.03) 1px, transparent 1px),
+    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.55), transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(10, 49, 97, 0.04), transparent 45%);
+  background-size: 100% 28px, 28px 100%, 100% 100%, 100% 100%;
+  border: 1px solid rgba(10, 49, 97, 0.12);
+  border-radius: 4px 12px 12px 4px;
+  box-shadow:
+    2px 3px 0 rgba(10, 49, 97, 0.04),
+    var(--shadow-sm);
+  padding: 12px 14px 10px;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.notes-paper::before {
+  content: "";
+  position: absolute;
+  left: 36px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(178, 34, 52, 0.18);
+  pointer-events: none;
+}
+
+.notes-paper-empty {
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 20px 28px 48px;
+}
+
+.notes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 10px 28px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(10, 49, 97, 0.12);
+}
+
+.notes-tool {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(10, 49, 97, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.notes-tool:hover {
+  background: #fff;
+  border-color: var(--navy-300);
+}
+
+.notes-tool-ghost {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.notes-tool-sep {
+  width: 1px;
+  height: 22px;
+  background: rgba(10, 49, 97, 0.12);
+  margin: 0 4px;
+}
+
+.notes-color-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  color: var(--navy-500);
+}
+
+.notes-color-label {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  text-decoration: underline;
+  text-decoration-color: var(--red-500);
+  text-underline-offset: 2px;
+}
+
+.notes-color-select {
+  max-width: 96px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(10, 49, 97, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.notes-title-input {
+  margin: 0 0 8px 28px;
+  border: none;
+  background: transparent;
+  font-family: "Caveat", "Segoe Print", "Comic Sans MS", cursive;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--navy-700);
+  outline: none;
+  width: calc(100% - 28px);
+  line-height: 1.2;
+}
+
+.notes-title-input::placeholder {
+  color: rgba(10, 49, 97, 0.35);
+}
+
+.notes-body {
+  flex: 1;
+  margin-left: 28px;
+  min-height: 220px;
+  outline: none;
+  font-family: "Caveat", "Segoe Print", "Comic Sans MS", cursive;
+  font-size: 1.35rem;
+  line-height: 1.45;
+  color: #1a1a1a;
+  word-break: break-word;
+}
+
+.notes-body:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(26, 26, 26, 0.35);
+  pointer-events: none;
+}
+
+.notes-body ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.35em 0;
+}
+
+.notes-body li {
+  margin-bottom: 0.2em;
+}
+
+.notes-footer {
+  margin: 10px 0 0 28px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font);
 }
 
 /* Games */
