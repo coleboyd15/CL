@@ -104,7 +104,6 @@
   function buildSystemPrompt(context, options) {
     const names = CL.profile.displayNames();
     const profile = CL.profile.get();
-    const loc = CL.geo.getSavedLocation();
     const model = CL.profile.getGrokModel ? CL.profile.getGrokModel() : "grok-4.5";
 
     const parts = [
@@ -113,12 +112,11 @@
         "CORE BEHAVIOR:",
         "- You are LIVE and knowledgeable. Give thoughtful, specific answers — never generic filler or vague chit-chat.",
         "- Think step-by-step privately, then answer clearly. For complex asks, briefly show your reasoning (2–4 short bullets) then the recommendation.",
-        "- Personalize using their names, city, bio, saved lists, location, and chat history in this thread.",
-        "- Prefer concrete names, places, dishes, titles, and next steps over abstract advice.",
+        "- Personalize using their names, city, bio, saved lists, and chat history in this thread.",
+        "- Prefer concrete names, titles, dishes, and next steps over abstract advice.",
         "- When recommending, give 1–3 ranked options with why each fits THIS couple.",
-        "- Ask clarifying questions only when needed (missing budget/vibe/diet/mood); otherwise decide and deliver.",
+        "- Ask clarifying questions only when needed; otherwise decide and deliver.",
         "- Warm, witty, and practical — not corporate or robotic.",
-        "- Never claim you browsed live maps or the web unless tools are provided; use the app context below as ground truth.",
         "- Multi-turn: remember earlier answers in this conversation."
       ].join("\n")
     ];
@@ -128,38 +126,14 @@
     if (profile.city) about.push(`Home / hangouts: ${profile.city}`);
     if (profile.anniversary) about.push(`Together since: ${profile.anniversary}`);
     if (profile.bio) about.push(`About them: ${profile.bio}`);
-    if (loc) {
-      about.push(
-        `GPS (approx): ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)} — prefer nearby when relevant.`
-      );
+    if (CL.daycount) {
+      about.push("Day counter: " + CL.daycount.formatLong());
     }
     if (CL.sync && CL.sync.isJoined && CL.sync.isJoined()) {
       const g = CL.sync.getGroup();
       about.push(`Shared couple group active${g && g.code ? " (" + g.code + ")" : ""} — data may be shared.`);
     }
     parts.push("COUPLE CONTEXT:\n" + about.join("\n"));
-
-    if (context === "food") {
-      const raw = (CL.geo.getActivePlaces && CL.geo.getActivePlaces()) || CL.data.places || [];
-      const catalog = CL.geo.placesWithDistance(raw, loc);
-      const state = CL.storage.get("places", {});
-      const lines = catalog.slice(0, 50).map((p) => {
-        const s = state[p.id] || {};
-        return `- ${p.name} | ${p.type} | ${p.cuisine} | ${p.area} | walk ${p.walk}/5 quality ${p.quality}/5 vibe ${p.vibe}/5 price ${p.price}/5 | ${p.distanceLabel || "distance unknown"} | ${p.blurb}${s.visited ? " | VISITED" : ""}${s.wishlist ? " | WISHLIST" : ""}${s.rating ? ` | rating ${s.rating}/5` : ""}${s.notes ? ` | notes: ${s.notes}` : ""}`;
-      });
-      const live = raw.some((p) => p.source === "osm");
-      parts.push(
-        [
-          "FOOD MODE:",
-          live
-            ? "Recommend primarily from this real nearby catalog (OpenStreetMap near their GPS)."
-            : "Recommend from this catalog (venues relative to their GPS when location is on).",
-          "Interview lightly if craving/budget/walkability is unclear, then pick with distances and vibe scores.",
-          "Honor wishlist/visited notes. Suggest a plan (when to go, what to order) when helpful.",
-          "Catalog:\n" + (lines.join("\n") || "(empty — invent sensible local-style ideas and say catalog was empty)")
-        ].join("\n")
-      );
-    }
 
     if (context === "movies") {
       const data = CL.storage.get("movies", { watched: [], wishlist: [] });
@@ -251,8 +225,7 @@
       trimmed.map((m) => ({ role: m.role, content: m.content }))
     );
 
-    const maxTokens =
-      context === "recipes" ? 2200 : context === "food" ? 1400 : 1200;
+    const maxTokens = context === "recipes" ? 2200 : 1200;
 
     const body = {
       model: model,
@@ -315,93 +288,10 @@
     const q = lastUserText(history).toLowerCase();
     const turn = history.filter((m) => m.role === "user").length;
 
-    // Conversational dinner interview for food
-    if (context === "food") {
-      if (turn === 1 && /recommend|dinner|eat|food|where|place|hungry|date/.test(q) && !/cheap|walk|dessert|cocktail|ramen|taco|romantic|cozy/.test(q)) {
-        return (
-          "Love it — quick interview so I nail the pick:\n\n" +
-          "1) Dinner, dessert, drinks, or café?\n" +
-          "2) Walkable / nearby only, or ok to go a bit farther?\n" +
-          "3) Budget vibe: $ chill, $$ nice, or $$$ special?\n" +
-          "4) Any cuisine craving or hard no?\n\n" +
-          "Answer in one message and I’ll recommend from your nearby list."
-        );
-      }
-      return foodReply(q, history);
-    }
     if (context === "movies") return moviesReply(q);
     if (context === "books") return booksReply(q);
     if (context === "recipes") return recipesReply(q, history);
     return generalReply(q);
-  }
-
-  function userPlaces() {
-    return CL.storage.get("places", {});
-  }
-
-  function foodReply(q, history) {
-    const loc = CL.geo.getSavedLocation();
-    const raw = (CL.geo.getActivePlaces && CL.geo.getActivePlaces()) || CL.data.places || [];
-    const catalog = CL.geo.placesWithDistance(raw, loc);
-    const state = userPlaces();
-    const visitedIds = Object.keys(state).filter((id) => state[id].visited);
-    const wishIds = Object.keys(state).filter((id) => state[id].wishlist);
-    const histText = history.map((m) => m.content).join(" ").toLowerCase();
-    const blob = (q + " " + histText).toLowerCase();
-
-    let pool = catalog.slice();
-
-    if (/dessert|sweet|cake|ice cream|pastry/.test(blob)) {
-      pool = pool.filter((p) => p.type === "dessert");
-    } else if (/drink|cocktail|bar|wine|coffee|café|cafe|boba/.test(blob)) {
-      pool = pool.filter((p) => p.type === "drinks" || p.type === "café");
-    } else if (/dinner|date|romantic|night|eat/.test(blob)) {
-      pool = pool.filter((p) => p.type === "dinner" || p.vibe >= 4);
-    }
-    if (/cheap|afford|budget|inexpensive|chill budget/.test(blob)) {
-      pool = pool.filter((p) => p.price <= 2);
-    } else if (/special|splurge|fancy|upscale/.test(blob)) {
-      pool = pool.filter((p) => p.price >= 3);
-    }
-    if (/walk|nearby|close|near me/.test(blob)) {
-      if (loc) {
-        pool = pool.filter((p) => p.distanceMiles != null && p.distanceMiles <= 1.2);
-      } else {
-        pool = pool.filter((p) => p.walk >= 4);
-      }
-    }
-    if (/quiet|cozy|chill/.test(blob)) {
-      pool = pool.filter((p) => p.vibe >= 4);
-    }
-
-    if (!pool.length) pool = catalog.slice();
-
-    if (!/again|revisit|favorite visited/.test(blob)) {
-      const fresh = pool.filter((p) => !visitedIds.includes(p.id));
-      if (fresh.length) pool = fresh;
-    }
-
-    if (loc) {
-      pool.sort((a, b) => (a.distanceMiles || 99) - (b.distanceMiles || 99) || b.quality + b.vibe - (a.quality + a.vibe));
-    } else {
-      pool.sort((a, b) => b.quality + b.vibe - (a.quality + a.vibe));
-    }
-
-    const picks = pool.slice(0, 3);
-    const lines = picks.map((p, i) => {
-      const dist = p.distanceLabel ? ` · ${p.distanceLabel}` : "";
-      return `${i + 1}. ${p.name} (${p.type})${dist} — ${p.blurb} Quality ${p.quality}/5 · Vibe ${p.vibe}/5 · $ ${p.price}/5.`;
-    });
-
-    let intro = loc
-      ? "Based on our chat and places near your location:"
-      : "Based on our chat (enable Use My Location in Food for distances):";
-    if (wishIds.length) {
-      const wishNames = catalog.filter((p) => wishIds.includes(p.id)).map((p) => p.name);
-      if (wishNames.length) intro = `Keeping your wishlist in mind (${wishNames.slice(0, 2).join(", ")}). Here's what fits:`;
-    }
-
-    return intro + "\n\n" + lines.join("\n\n") + "\n\nWant a different vibe? Tell me more and I’ll re-pick.";
   }
 
   function moviesReply(q) {
@@ -499,7 +389,7 @@
       const n = CL.profile.displayNames();
       return `Hey ${n.myName} & ${n.partnerName} 👋 What are we planning — dinner, a movie, notes, or something to cook?`;
     }
-    return "Open Food, Movies, Recipes, or Books for context-aware recs — or add an xAI API key in Profile for full live Grok chats.";
+    return "Open Movies, Recipes, or Books for context-aware recs — or add an xAI API key in Profile for full live Grok chats.";
   }
 
   global.CL = global.CL || {};

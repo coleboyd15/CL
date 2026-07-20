@@ -6,7 +6,7 @@
       const greet = CL.profile.greeting();
       const label = CL.profile.coupleLabel();
       const hasKey = !!(CL.profile.getSettings().xaiApiKey || "").trim();
-      const loc = CL.geo.getSavedLocation();
+      const day = CL.daycount ? CL.daycount.formatLong() : "";
 
       const welcomeLine = CL.profile.hasNames()
         ? `${greet}, ${CL.escapeHtml(names.myName)} & ${CL.escapeHtml(names.partnerName)}`
@@ -27,10 +27,11 @@
                   ${
                     profile.coupleName
                       ? CL.escapeHtml(profile.coupleName)
-                      : "Food, films, notes, recipes & more"
+                      : "News, films, notes, recipes & more"
                   }
                   ${profile.anniversary ? ` · since ${CL.escapeHtml(profile.anniversary)}` : ""}
                 </p>
+                ${day ? `<p class="card-meta" style="margin-top:6px">${CL.escapeHtml(day)}</p>` : ""}
               </div>
             </div>
             ${
@@ -39,7 +40,7 @@
                 : ""
             }
             <div class="home-status chips" style="margin-top:12px">
-              <span class="chip ${loc ? "active" : ""}">${loc ? "📍 Location on" : "📍 Location off"}</span>
+              <span class="chip active">📰 Daily news</span>
               <span class="chip ${hasKey ? "active" : ""}">${hasKey ? "✦ Grok API ready" : "✦ Grok offline mode"}</span>
             </div>
           </div>
@@ -67,10 +68,10 @@
           <div class="section-block">
             <div class="section-label">Quick links</div>
             <div class="quick-grid">
-              <a href="#food" class="quick-card">
-                <span class="emoji">🍽️</span>
-                <strong>Food</strong>
-                <span>Find a spot</span>
+              <a href="#news" class="quick-card">
+                <span class="emoji">📰</span>
+                <strong>News</strong>
+                <span>Daily ~5 min story</span>
               </a>
               <a href="#movies" class="quick-card">
                 <span class="emoji">🎬</span>
@@ -113,9 +114,9 @@
           <div class="section-block">
             <div class="section-label">Tonight with ${CL.escapeHtml(label)}</div>
             <div class="stack-sm">
-              <button type="button" class="card home-action" data-go="food">
-                <strong>Where should we eat?</strong>
-                <p class="card-meta">Open Food · GPS + OpenStreetMap · ask Grok</p>
+              <button type="button" class="card home-action" data-go="news">
+                <strong>Today's briefing</strong>
+                <p class="card-meta">A ~5 minute narrative across science, culture, AI & more</p>
               </button>
               <button type="button" class="card home-action" data-go="movies">
                 <strong>Movie night?</strong>

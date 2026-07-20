@@ -445,9 +445,7 @@
   line-height: 1.4;
 }
 
-.brand-text span {
-  display: none;
-}
+/* day counter is shown in brand-text */
 
 /* Notes — Apple Notes–style */
 .notes-page {
@@ -1537,7 +1535,75 @@
   border-color: var(--green-300);
 }
 
-/* Food place type badge */
+/* News daily story */
+.news-story {
+  padding: 16px 16px 18px;
+  background: linear-gradient(180deg, #fff 0%, var(--cream) 100%);
+}
+
+.news-kicker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--navy-500);
+  margin-bottom: 12px;
+}
+
+.news-body {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.news-prose {
+  margin-bottom: 1em;
+}
+
+.news-intro {
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.news-outro {
+  font-style: italic;
+  color: var(--text-muted);
+  margin-top: 0.5em;
+}
+
+.news-segment {
+  margin: 1.25em 0;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--border);
+}
+
+.news-seg-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--red-500);
+  margin-bottom: 4px;
+}
+
+.news-seg-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  line-height: 1.25;
+}
+
+.news-hook {
+  font-weight: 600;
+  color: var(--navy-700);
+  margin-bottom: 0.6em;
+}
+
+.news-loading {
+  padding: 36px 16px;
+}
+
 .type-badge {
   display: inline-block;
   font-size: 0.68rem;

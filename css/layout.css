@@ -49,13 +49,28 @@
 .brand-text {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1px;
+  min-width: 0;
 }
 
 .brand-text strong {
   font-size: 1.15rem;
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+.brand-text .day-counter,
+#header-daycount {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--navy-500);
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-actions {

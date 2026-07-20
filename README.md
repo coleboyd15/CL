@@ -1,9 +1,8 @@
 # CL — Couple's Lifestyle App
 
-Mobile-friendly web app: home, food, movies, games, notes, books, recipes.
+Mobile-friendly web app: home, news, movies, games, notes, books, recipes.
 
 **Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream  
-
 
 **Live deploy:** push to GitHub → Vercel auto-updates
 
@@ -16,15 +15,15 @@ cd $env:USERPROFILE\Documents\CL
 npx --yes serve .
 ```
 
-Use **HTTPS / Vercel / localhost** so GPS works.
+Use **HTTPS / Vercel / localhost** for best results.
 
 ## Features
 
 | Area | Details |
 |------|---------|
-| **Home** | Dashboard, names, quick links |
-| **Food** | Fast GPS, OpenStreetMap nearby places, filters, visits, **Ask Grok** |
-| **Movies** | Watched / wishlist / sort (rating, title, year) · decimal ratings · **Ask Grok** |
+| **Home** | Dashboard, names, day counter, quick links |
+| **News** | Daily ~5 min narrative briefing (science, culture, AI, books, etc.) |
+| **Movies** | Watched / wishlist / sort · decimal ratings · **Ask Grok** |
 | **Games** | Golf, Darts, Spades, Gin · scores + history (syncs) |
 | **8-Ball** | Under More · Magic 8-Ball |
 | **Notes** | Shared scratch-paper notes · rich text · Couple Group sync |
@@ -32,10 +31,11 @@ Use **HTTPS / Vercel / localhost** so GPS works.
 | **Books** | Shelves + **Ask Grok** (syncs) |
 | **Icons** | `icons/` + `manifest.json` PWA emblem |
 | **Profile** | Couple photo/names · **Couple Group sync** · xAI API key |
+| **Day counter** | Days since Apr 11, 2026 · Month X, Day Y in header |
 
 ## Couple Group (shared sync)
 
-You and your partner share **movies, books, notes, games, recipes, food places, and profile names** in real time via free **Firebase Realtime Database**.
+You and your partner share **movies, books, notes, games, recipes, and profile names** in real time via free **Firebase Realtime Database**.
 
 ### One-time setup (either of you)
 
@@ -76,17 +76,14 @@ Optional: copy `js/firebase-config.example.js` → `js/firebase-config.js` with 
 1. Get a key at [console.x.ai](https://console.x.ai/)
 2. **Profile → xAI API key** → save  
 3. **Profile → Grok model** — default is **grok-4.5** (also grok-4.3, grok-build, legacy options)  
-4. Use **Ask Grok** on Food, Movies, Recipes, Books — all use the selected model  
-
+4. Use **Ask Grok** on Movies, Recipes, Books — all use the selected model  
 
 Without a key, smart offline mode still works.
 
-## Food location
+## News
 
-- **Use My Location** uses a fast GPS fix first, then refines in the background  
-- Nearby venues from OpenStreetMap (multiple Overpass mirrors, first success wins)  
-- Local cache for instant reload; expanded radius if sparse; realistic fallbacks if maps fail  
+Opens with a stitched daily story (~5 minutes) across movies, culture, science, evolutionary biology, AI, books, opinion, investigations, true crime themes, futurism, and curious studies. Live RSS when available; curated fallbacks otherwise. Refreshes when the calendar day changes (or via **Refresh**).
 
 ## Header
 
-Brand shows **CL** only (no subtitle).
+Brand shows **CL** plus the day counter (e.g. `45d · M2 D16`).

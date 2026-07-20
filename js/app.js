@@ -1,10 +1,10 @@
 /* CL app shell + hash router */
 (function () {
-  const PRIMARY = new Set(["home", "food", "movies", "games", "more"]);
+  const PRIMARY = new Set(["home", "news", "movies", "games", "more"]);
 
   const ROUTES = {
     home: { title: "Home", nav: "home", render: () => CL.sections.home.render },
-    food: { title: "Food", nav: "food", render: () => CL.sections.food.render },
+    news: { title: "News", nav: "news", render: () => CL.sections.news.render },
     movies: { title: "Movies", nav: "movies", render: () => CL.sections.movies.render },
     games: { title: "Games", nav: "games", render: () => CL.sections.games.render },
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
@@ -18,6 +18,8 @@
 
   function currentRoute() {
     const hash = (location.hash || "#home").replace(/^#/, "").split("?")[0].toLowerCase();
+    // Legacy food → news
+    if (hash === "food") return "news";
     return ROUTES[hash] ? hash : "home";
   }
 
@@ -30,15 +32,22 @@
 
   function refreshHeader() {
     const mark = document.getElementById("header-avatar");
-    if (!mark) return;
-    const p = CL.profile.get();
-    if (p.avatar) {
-      mark.innerHTML = `<img src="${p.avatar}" alt="" class="header-avatar-img" />`;
-      mark.classList.add("has-photo");
-    } else {
-      // Default emblem icon
-      mark.innerHTML = `<img src="icons/icon-96.png" alt="" class="header-avatar-img" />`;
-      mark.classList.add("has-photo");
+    if (mark) {
+      const p = CL.profile.get();
+      if (p.avatar) {
+        mark.innerHTML = `<img src="${p.avatar}" alt="" class="header-avatar-img" />`;
+        mark.classList.add("has-photo");
+      } else {
+        mark.innerHTML = `<img src="icons/icon-96.png" alt="" class="header-avatar-img" />`;
+        mark.classList.add("has-photo");
+      }
+    }
+    const dayEl = document.getElementById("header-daycount");
+    if (dayEl && CL.daycount) {
+      const info = CL.daycount.getDayCount();
+      dayEl.textContent = CL.daycount.formatCompact(info);
+      dayEl.title = CL.daycount.formatLong(info);
+      dayEl.setAttribute("aria-label", CL.daycount.formatLong(info));
     }
   }
 
@@ -54,6 +63,12 @@
             <span class="emoji">💕</span>
             <strong>Profile & Settings</strong>
             <p>Names, couple group, Grok API</p>
+            <span class="badge">Open</span>
+          </button>
+          <button type="button" class="more-card" data-go="news">
+            <span class="emoji">📰</span>
+            <strong>News</strong>
+            <p>Daily ~5 min briefing</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="notes">
@@ -91,8 +106,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile, share a group code, enable location in Food,
-            and add an xAI key for live Grok.
+            (Firebase). Set names under Profile, open News for the daily story, and add an xAI key for live Grok.
           </p>
         </div>
       </section>
@@ -110,6 +124,12 @@
     const def = ROUTES[key];
     const main = document.getElementById("main");
     if (!main || !def) return;
+
+    // Normalize legacy #food hash
+    if ((location.hash || "").replace(/^#/, "").split("?")[0].toLowerCase() === "food") {
+      location.replace("#news");
+      return;
+    }
 
     document.title = `CL · ${def.title}`;
     setActiveNav(key);
@@ -129,11 +149,6 @@
       location.replace("#home");
     }
 
-    // Migrate old default
-    if (location.hash === "#food" && !sessionStorage.getItem("cl_seen_home")) {
-      // don't force-redirect if they bookmarked food
-    }
-
     window.addEventListener("hashchange", route);
     document.getElementById("btn-home")?.addEventListener("click", () => {
       location.hash = "#home";
@@ -148,14 +163,17 @@
     refreshHeader();
     route();
 
-    // When partner syncs data, refresh the current screen (debounced)
+    // Prefetch today's news in background
+    if (CL.news && typeof CL.news.getDailyEdition === "function") {
+      CL.news.getDailyEdition({ force: false }).catch(() => {});
+    }
+
     let syncRefreshTimer = null;
     window.addEventListener("cl-sync-update", (e) => {
       const k = e.detail && e.detail.key;
       if (!k) return;
       clearTimeout(syncRefreshTimer);
       syncRefreshTimer = setTimeout(() => {
-        // Don't yank focus while typing / editing notes
         const ae = document.activeElement;
         const tag = (ae && ae.tagName) || "";
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
