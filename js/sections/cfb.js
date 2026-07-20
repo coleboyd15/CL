@@ -1,4 +1,4 @@
-/* Daily narrative News section */
+/* College Football daily briefing section */
 (function (global) {
   function render(root) {
     let loading = true;
@@ -10,10 +10,10 @@
       error = "";
       paint();
       try {
-        edition = await CL.news.getDailyEdition({ force: !!force });
+        edition = await CL.cfb.getDailyEdition({ force: !!force });
       } catch (err) {
-        error = err.message || "Could not load today's briefing";
-        edition = CL.news.getCached();
+        error = err.message || "Could not load today's CFB briefing";
+        edition = CL.cfb.getCached();
       } finally {
         loading = false;
         paint();
@@ -21,26 +21,32 @@
     }
 
     function paint() {
-      const syncedNote =
-        CL.sync && CL.sync.isJoined && CL.sync.isJoined()
-          ? "Couple Group is separate — this briefing is per device & refreshes daily."
-          : "Refreshes on open when the calendar day changes (morning-friendly).";
-
       root.innerHTML = `
-        <section class="page news-page">
+        <section class="page news-page cfb-page">
           <div class="row-between" style="align-items:flex-start;gap:10px;margin-bottom:8px">
             <div>
-              <h1 class="page-title" style="margin:0">News</h1>
-              <p class="page-sub" style="margin:4px 0 0">Your daily story · ~5 min · curiosity over clickbait</p>
+              <h1 class="page-title" style="margin:0">College Football</h1>
+              <p class="page-sub" style="margin:4px 0 0">
+                Tech · A&amp;M · Texas · Big 12 · SEC · portal, NIL, odds &amp; more
+              </p>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" id="news-refresh" ${loading ? "disabled" : ""}>
+            <button type="button" class="btn btn-secondary btn-sm" id="cfb-refresh" ${loading ? "disabled" : ""}>
               ${loading ? "Loading…" : "Refresh"}
             </button>
           </div>
 
+          <div class="chips" style="margin-bottom:12px">
+            <span class="chip active">Texas Tech</span>
+            <span class="chip active">Texas A&amp;M</span>
+            <span class="chip active">Texas</span>
+            <span class="chip">Portal</span>
+            <span class="chip">NIL</span>
+            <span class="chip">Rankings</span>
+          </div>
+
           ${
             loading && !edition
-              ? `<div class="empty news-loading"><div class="spinner spinner-lg"></div><p>Gathering today's briefing…</p></div>`
+              ? `<div class="empty news-loading"><div class="spinner spinner-lg"></div><p>Building today’s CFB briefing…</p></div>`
               : ""
           }
 
@@ -49,9 +55,9 @@
           ${
             edition
               ? `
-            <article class="card news-story">
+            <article class="card news-story cfb-story">
               <div class="news-kicker">
-                ${CL.escapeHtml(edition.title || "Today's briefing")}
+                ${CL.escapeHtml(edition.title || "CFB Daily")}
                 · ~${edition.readMinutes || 5} min
                 ${edition.fromCache ? " · saved" : " · fresh"}
               </div>
@@ -68,9 +74,9 @@
                     }
                     return `
                       <section class="news-segment">
-                        <div class="news-seg-label">${CL.escapeHtml(
-                          String(p.index || "")
-                        )}. ${CL.escapeHtml((p.category || "story").replace(/_/g, " "))}</div>
+                        <div class="news-seg-label">${CL.escapeHtml(String(p.index || ""))}. ${CL.escapeHtml(
+                          p.category || "CFB"
+                        )}</div>
                         <h2 class="news-seg-title">${CL.escapeHtml(p.title || "")}</h2>
                         ${p.hook ? `<p class="news-hook">${CL.escapeHtml(p.hook)}</p>` : ""}
                         <p class="news-prose">${CL.escapeHtml(p.body || "")}</p>
@@ -78,30 +84,30 @@
                   })
                   .join("")}
               </div>
-              <p class="filter-hint" style="margin-top:14px">${CL.escapeHtml(syncedNote)}</p>
+              <p class="filter-hint" style="margin-top:14px">
+                Updates when the calendar day changes, or tap Refresh. Live feeds when available; curated Texas-first fallbacks otherwise.
+              </p>
             </article>
 
             <div class="section-block" style="margin-top:16px">
-              <div class="section-label">Topics in today's loop</div>
+              <div class="section-label">In today’s loop</div>
               <div class="chips">
                 ${(edition.segments || [])
                   .map(
                     (s) =>
-                      `<span class="chip active">${CL.escapeHtml(
-                        (s.category || "").replace(/_/g, " ")
-                      )}</span>`
+                      `<span class="chip active">${CL.escapeHtml(s.category || "CFB")}</span>`
                   )
                   .join("")}
               </div>
             </div>`
               : !loading
-                ? `<div class="empty"><div class="emoji">📰</div><p>No briefing yet. Tap Refresh.</p></div>`
+                ? `<div class="empty"><div class="emoji">🏈</div><p>No briefing yet. Tap Refresh.</p></div>`
                 : ""
           }
         </section>
       `;
 
-      root.querySelector("#news-refresh")?.addEventListener("click", () => load(true));
+      root.querySelector("#cfb-refresh")?.addEventListener("click", () => load(true));
     }
 
     paint();
@@ -110,5 +116,5 @@
 
   global.CL = global.CL || {};
   global.CL.sections = global.CL.sections || {};
-  global.CL.sections.news = { render };
+  global.CL.sections.cfb = { render };
 })(window);

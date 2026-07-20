@@ -1,6 +1,6 @@
 # CL — Couple's Lifestyle App
 
-Mobile-friendly web app: home, news, movies, games, notes, books, recipes.
+Mobile-friendly web app: home, college football, movies, games, notes, books, recipes.
 
 **Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream  
 
@@ -22,7 +22,7 @@ Use **HTTPS / Vercel / localhost** for best results.
 | Area | Details |
 |------|---------|
 | **Home** | Dashboard, names, day counter, quick links |
-| **News** | Daily ~5 min narrative briefing (science, culture, AI, books, etc.) |
+| **CFB** | Daily college football briefing (Tech, A&M, Texas, portal, NIL, odds, etc.) |
 | **Movies** | Watched / wishlist / sort · decimal ratings · **Ask Grok** |
 | **Games** | Golf, Darts, Spades, Gin · scores + history (syncs) |
 | **8-Ball** | Under More · Magic 8-Ball |
@@ -80,9 +80,9 @@ Optional: copy `js/firebase-config.example.js` → `js/firebase-config.js` with 
 
 Without a key, smart offline mode still works.
 
-## News
+## College Football
 
-Opens with a stitched daily story (~5 minutes) across movies, culture, science, evolutionary biology, AI, books, opinion, investigations, true crime themes, futurism, and curious studies. Live RSS when available; curated fallbacks otherwise. Refreshes when the calendar day changes (or via **Refresh**).
+Daily ~5 minute narrative briefing focused on **Texas Tech**, **Texas A&M**, and **Texas**, plus Big 12, SEC, and national CFB. Covers transfer portal, rankings, betting odds context, NIL, lawsuits/governance, tradition, players, and trending stories. Live feeds when available; curated Texas-first fallbacks otherwise. Refreshes when the calendar day changes (or via **Refresh**).
 
 ## Header
 

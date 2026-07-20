@@ -27,7 +27,7 @@
                   ${
                     profile.coupleName
                       ? CL.escapeHtml(profile.coupleName)
-                      : "News, films, notes, recipes & more"
+                      : "CFB, films, notes, recipes & more"
                   }
                   ${profile.anniversary ? ` · since ${CL.escapeHtml(profile.anniversary)}` : ""}
                 </p>
@@ -40,7 +40,7 @@
                 : ""
             }
             <div class="home-status chips" style="margin-top:12px">
-              <span class="chip active">📰 Daily news</span>
+              <span class="chip active">🏈 College football</span>
               <span class="chip ${hasKey ? "active" : ""}">${hasKey ? "✦ Grok API ready" : "✦ Grok offline mode"}</span>
             </div>
           </div>
@@ -68,10 +68,10 @@
           <div class="section-block">
             <div class="section-label">Quick links</div>
             <div class="quick-grid">
-              <a href="#news" class="quick-card">
-                <span class="emoji">📰</span>
-                <strong>News</strong>
-                <span>Daily ~5 min story</span>
+              <a href="#cfb" class="quick-card">
+                <span class="emoji">🏈</span>
+                <strong>CFB</strong>
+                <span>Tech · A&amp;M · Texas</span>
               </a>
               <a href="#movies" class="quick-card">
                 <span class="emoji">🎬</span>
@@ -114,9 +114,9 @@
           <div class="section-block">
             <div class="section-label">Tonight with ${CL.escapeHtml(label)}</div>
             <div class="stack-sm">
-              <button type="button" class="card home-action" data-go="news">
-                <strong>Today's briefing</strong>
-                <p class="card-meta">A ~5 minute narrative across science, culture, AI & more</p>
+              <button type="button" class="card home-action" data-go="cfb">
+                <strong>College football briefing</strong>
+                <p class="card-meta">Portal, rankings, NIL, Tech / A&amp;M / Texas — ~5 min</p>
               </button>
               <button type="button" class="card home-action" data-go="movies">
                 <strong>Movie night?</strong>

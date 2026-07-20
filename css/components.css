@@ -1535,10 +1535,15 @@
   border-color: var(--green-300);
 }
 
-/* News daily story */
-.news-story {
+/* Daily briefing story (CFB) */
+.news-story,
+.cfb-story {
   padding: 16px 16px 18px;
   background: linear-gradient(180deg, #fff 0%, var(--cream) 100%);
+}
+
+.cfb-story {
+  border-top: 3px solid var(--red-500);
 }
 
 .news-kicker {

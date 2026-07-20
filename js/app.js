@@ -1,10 +1,11 @@
 /* CL app shell + hash router */
 (function () {
-  const PRIMARY = new Set(["home", "news", "movies", "games", "more"]);
+  const PRIMARY = new Set(["home", "cfb", "movies", "games", "more"]);
 
   const ROUTES = {
     home: { title: "Home", nav: "home", render: () => CL.sections.home.render },
-    news: { title: "News", nav: "news", render: () => CL.sections.news.render },
+    cfb: { title: "College Football", nav: "cfb", render: () => CL.sections.cfb.render },
+    football: { title: "College Football", nav: "cfb", render: () => CL.sections.cfb.render },
     movies: { title: "Movies", nav: "movies", render: () => CL.sections.movies.render },
     games: { title: "Games", nav: "games", render: () => CL.sections.games.render },
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
@@ -18,8 +19,8 @@
 
   function currentRoute() {
     const hash = (location.hash || "#home").replace(/^#/, "").split("?")[0].toLowerCase();
-    // Legacy food → news
-    if (hash === "food") return "news";
+    // Legacy routes
+    if (hash === "food" || hash === "news") return "cfb";
     return ROUTES[hash] ? hash : "home";
   }
 
@@ -65,10 +66,10 @@
             <p>Names, couple group, Grok API</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="news">
-            <span class="emoji">📰</span>
-            <strong>News</strong>
-            <p>Daily ~5 min briefing</p>
+          <button type="button" class="more-card" data-go="cfb">
+            <span class="emoji">🏈</span>
+            <strong>College Football</strong>
+            <p>Tech · A&amp;M · Texas · portal &amp; more</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="notes">
@@ -106,7 +107,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile, open News for the daily story, and add an xAI key for live Grok.
+            (Firebase). Set names under Profile, open CFB for the daily briefing, and add an xAI key for live Grok.
           </p>
         </div>
       </section>
@@ -125,9 +126,10 @@
     const main = document.getElementById("main");
     if (!main || !def) return;
 
-    // Normalize legacy #food hash
-    if ((location.hash || "").replace(/^#/, "").split("?")[0].toLowerCase() === "food") {
-      location.replace("#news");
+    // Normalize legacy hashes
+    const rawHash = (location.hash || "").replace(/^#/, "").split("?")[0].toLowerCase();
+    if (rawHash === "food" || rawHash === "news") {
+      location.replace("#cfb");
       return;
     }
 
@@ -163,9 +165,9 @@
     refreshHeader();
     route();
 
-    // Prefetch today's news in background
-    if (CL.news && typeof CL.news.getDailyEdition === "function") {
-      CL.news.getDailyEdition({ force: false }).catch(() => {});
+    // Prefetch today's CFB briefing in background
+    if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
+      CL.cfb.getDailyEdition({ force: false }).catch(() => {});
     }
 
     let syncRefreshTimer = null;
