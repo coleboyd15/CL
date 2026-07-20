@@ -22,7 +22,7 @@ Use **HTTPS / Vercel / localhost** for best results.
 | Area | Details |
 |------|---------|
 | **Home** | Dashboard, names, day counter, quick links |
-| **CFB** | Daily college football briefing (Tech, A&M, Texas, portal, NIL, odds, etc.) |
+| **CFB** | Tech vs A&M 2026 win-total tracker · implied “who wins more” · schedules |
 | **Movies** | Watched / wishlist / sort · decimal ratings · **Ask Grok** |
 | **Games** | Golf, Darts, Spades, Gin · scores + history (syncs) |
 | **8-Ball** | Under More · Magic 8-Ball |
@@ -80,9 +80,16 @@ Optional: copy `js/firebase-config.example.js` → `js/firebase-config.js` with 
 
 Without a key, smart offline mode still works.
 
-## College Football
+## Tech vs A&M (CFB tab)
 
-Daily ~5 minute narrative briefing focused on **Texas Tech**, **Texas A&M**, and **Texas**, plus Big 12, SEC, and national CFB. Covers transfer portal, rankings, betting odds context, NIL, lawsuits/governance, tradition, players, and trending stories. Live feeds when available; curated Texas-first fallbacks otherwise. Refreshes when the calendar day changes (or via **Refresh**).
+2026 regular-season **win total** tracker for **Texas Tech** and **Texas A&M**:
+
+- O/U lines + American odds + implied %
+- Kalshi-style **“Who wins more RS games?”** market (Monte Carlo from the two win totals)
+- Daily trend chart (local snapshots)
+- Full schedules + records/logos from ESPN (refresh on open / **Update**)
+
+Win-total *prices* use consensus seed lines when sportsbook APIs are blocked in-browser; structure is ready for a paid odds API key later.
 
 ## Header
 

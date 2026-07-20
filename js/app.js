@@ -4,8 +4,8 @@
 
   const ROUTES = {
     home: { title: "Home", nav: "home", render: () => CL.sections.home.render },
-    cfb: { title: "College Football", nav: "cfb", render: () => CL.sections.cfb.render },
-    football: { title: "College Football", nav: "cfb", render: () => CL.sections.cfb.render },
+    cfb: { title: "Tech vs A&M", nav: "cfb", render: () => CL.sections.cfb.render },
+    football: { title: "Tech vs A&M", nav: "cfb", render: () => CL.sections.cfb.render },
     movies: { title: "Movies", nav: "movies", render: () => CL.sections.movies.render },
     games: { title: "Games", nav: "games", render: () => CL.sections.games.render },
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
@@ -68,8 +68,8 @@
           </button>
           <button type="button" class="more-card" data-go="cfb">
             <span class="emoji">🏈</span>
-            <strong>College Football</strong>
-            <p>Tech · A&amp;M · Texas · portal &amp; more</p>
+            <strong>Tech vs A&amp;M</strong>
+            <p>2026 win totals · who wins more</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="notes">
@@ -107,7 +107,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile, open CFB for the daily briefing, and add an xAI key for live Grok.
+            (Firebase). Set names under Profile, track Tech vs A&amp;M win totals, and add an xAI key for live Grok.
           </p>
         </div>
       </section>

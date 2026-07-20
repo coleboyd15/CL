@@ -1535,78 +1535,364 @@
   border-color: var(--green-300);
 }
 
-/* Daily briefing story (CFB) */
-.news-story,
-.cfb-story {
-  padding: 16px 16px 18px;
-  background: linear-gradient(180deg, #fff 0%, var(--cream) 100%);
+/* Tech vs A&M betting tracker */
+.cfb-tracker-page .page-title {
+  letter-spacing: -0.03em;
 }
 
-.cfb-story {
-  border-top: 3px solid var(--red-500);
-}
-
-.news-kicker {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--navy-500);
+.cfb-market {
+  background: linear-gradient(165deg, #0a3161 0%, #14284a 55%, #1a1a2e 100%);
+  color: #f5f5f7;
+  border: none;
   margin-bottom: 12px;
 }
 
-.news-body {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--text);
+.cfb-market .card-meta {
+  color: rgba(255, 255, 255, 0.65);
 }
 
-.news-prose {
-  margin-bottom: 1em;
-}
-
-.news-intro {
+.cfb-market-q {
   font-size: 1.05rem;
-  font-weight: 500;
-}
-
-.news-outro {
-  font-style: italic;
-  color: var(--text-muted);
-  margin-top: 0.5em;
-}
-
-.news-segment {
-  margin: 1.25em 0;
-  padding-top: 0.75em;
-  border-top: 1px solid var(--border);
-}
-
-.news-seg-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--red-500);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
   margin-bottom: 4px;
 }
 
-.news-seg-title {
+.cfb-market-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 16px;
+}
+
+.cfb-binary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.cfb-binary-side {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cfb-binary-side.tech .cfb-binary-name {
+  color: #ff8a80;
+}
+
+.cfb-binary-side.agm .cfb-binary-name {
+  color: #ffcc80;
+}
+
+.cfb-binary-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.cfb-binary-cents {
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.cfb-binary-pct {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.85;
+  width: 100%;
+}
+
+.cfb-binary-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  order: 0;
+}
+
+.cfb-binary-fill.tech {
+  height: 100%;
+  background: linear-gradient(90deg, #cc0000, #ff5252);
+  border-radius: 999px;
+}
+
+.cfb-odds-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 420px) {
+  .cfb-odds-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cfb-team-odds {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.cfb-team-odds-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cfb-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.cfb-logo-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: var(--navy-100);
+  color: var(--navy-500);
+}
+
+.cfb-logo-fallback.sm {
+  width: 28px;
+  height: 28px;
+  font-size: 0.55rem;
+}
+
+.cfb-team-name {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.cfb-line-hero {
+  text-align: center;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.cfb-line-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.cfb-line-value {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--navy-500);
+  line-height: 1.1;
+}
+
+.cfb-ou-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cfb-ou-cell {
+  background: var(--cream);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.cfb-ou-side {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.cfb-ou-odds {
   font-size: 1.15rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0 0 8px;
-  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
 }
 
-.news-hook {
+.cfb-ou-pct {
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--navy-700);
-  margin-bottom: 0.6em;
+  color: var(--navy-500);
+  margin-top: 2px;
 }
 
-.news-loading {
-  padding: 36px 16px;
+.cfb-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: rgba(10, 49, 97, 0.03);
+  border-radius: var(--radius-sm);
+}
+
+.cfb-chart-mid {
+  stroke: rgba(10, 49, 97, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.cfb-chart-tech {
+  stroke: #cc0000;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cfb-chart-agm {
+  stroke: #500000;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.cfb-chart-tech-dot {
+  fill: #cc0000;
+}
+
+.cfb-chart-agm-dot {
+  fill: #500000;
+}
+
+.cfb-chart-label {
+  font-size: 9px;
+  fill: var(--text-muted);
+  font-family: var(--font);
+}
+
+.cfb-chart-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.cfb-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cfb-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.cfb-dot.tech {
+  background: #cc0000;
+}
+
+.cfb-dot.agm {
+  background: #500000;
+}
+
+.cfb-sched-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cfb-sched-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.cfb-game-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cfb-game-row:last-child {
+  border-bottom: none;
+}
+
+.cfb-game-when {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.cfb-game-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cfb-opp-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.cfb-game-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cfb-game-opp {
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfb-result {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  background: var(--navy-100);
+  color: var(--navy-500);
+  flex-shrink: 0;
+}
+
+.cfb-result.win {
+  background: rgba(36, 138, 61, 0.15);
+  color: #166534;
+}
+
+.cfb-result.loss {
+  background: rgba(178, 34, 52, 0.12);
+  color: var(--red-500);
+}
+
+.cfb-ha {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .type-badge {

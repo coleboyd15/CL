@@ -40,7 +40,7 @@
                 : ""
             }
             <div class="home-status chips" style="margin-top:12px">
-              <span class="chip active">🏈 College football</span>
+              <span class="chip active">🏈 Tech vs A&amp;M</span>
               <span class="chip ${hasKey ? "active" : ""}">${hasKey ? "✦ Grok API ready" : "✦ Grok offline mode"}</span>
             </div>
           </div>
@@ -70,8 +70,8 @@
             <div class="quick-grid">
               <a href="#cfb" class="quick-card">
                 <span class="emoji">🏈</span>
-                <strong>CFB</strong>
-                <span>Tech · A&amp;M · Texas</span>
+                <strong>Tech vs A&amp;M</strong>
+                <span>2026 win totals</span>
               </a>
               <a href="#movies" class="quick-card">
                 <span class="emoji">🎬</span>
@@ -115,8 +115,8 @@
             <div class="section-label">Tonight with ${CL.escapeHtml(label)}</div>
             <div class="stack-sm">
               <button type="button" class="card home-action" data-go="cfb">
-                <strong>College football briefing</strong>
-                <p class="card-meta">Portal, rankings, NIL, Tech / A&amp;M / Texas — ~5 min</p>
+                <strong>Tech vs A&amp;M tracker</strong>
+                <p class="card-meta">2026 win totals, implied odds &amp; schedules</p>
               </button>
               <button type="button" class="card home-action" data-go="movies">
                 <strong>Movie night?</strong>
