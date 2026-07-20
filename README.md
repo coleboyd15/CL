@@ -89,7 +89,7 @@ Without a key, smart offline mode still works.
 - Daily trend chart (local snapshots)
 - Full schedules + records/logos from ESPN (refresh on open / **Update**)
 
-Win-total *prices* use consensus seed lines when sportsbook APIs are blocked in-browser; structure is ready for a paid odds API key later.
+Win totals are scraped from free public odds pages (**OddsShark / FanDuel**, **VegasInsider**) via CORS proxies when needed. Fallback consensus (Jul 2026): **Tech 10.5**, **A&M 8.5**. Schedules/records from ESPN.
 
 ## Header
 

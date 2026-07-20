@@ -17,7 +17,8 @@
           !cached ||
           !cached.tech ||
           String(cached.tech.espnId) !== "2641" ||
-          /washington/i.test(cached.tech.displayName || "");
+          /washington/i.test(cached.tech.displayName || "") ||
+          (cached.lines && cached.lines.tech && Number(cached.lines.tech.line) <= 8);
         data = await CL.cfb.loadTracker({
           force: !!force || badCache,
           season: 2026
@@ -25,7 +26,14 @@
       } catch (err) {
         error = err.message || "Could not load tracker";
         const cached = CL.cfb.getCache();
-        if (cached && cached.tech && String(cached.tech.espnId) === "2641") {
+        if (
+          cached &&
+          cached.tech &&
+          String(cached.tech.espnId) === "2641" &&
+          cached.lines &&
+          cached.lines.tech &&
+          Number(cached.lines.tech.line) > 8
+        ) {
           data = cached;
         } else {
           data = null;
@@ -103,16 +111,31 @@
             <div class="cfb-ou-cell">
               <div class="cfb-ou-side">Over ${CL.escapeHtml(String(lines.line))}</div>
               <div class="cfb-ou-odds">${CL.escapeHtml(CL.cfb.formatAmerican(lines.overOdds))}</div>
-              <div class="cfb-ou-pct">${overPct}</div>
+              <div class="cfb-ou-pct">${overPct} impl.</div>
             </div>
             <div class="cfb-ou-cell">
               <div class="cfb-ou-side">Under ${CL.escapeHtml(String(lines.line))}</div>
               <div class="cfb-ou-odds">${CL.escapeHtml(CL.cfb.formatAmerican(lines.underOdds))}</div>
-              <div class="cfb-ou-pct">${underPct}</div>
+              <div class="cfb-ou-pct">${underPct} impl.</div>
             </div>
           </div>
           <div class="card-meta" style="margin-top:8px">${CL.escapeHtml(lines.book || "Consensus")}</div>
         </div>`;
+    }
+
+    function linesAsOfLabel(d) {
+      if (!d || !d.lines || !d.lines.asOf) return "";
+      try {
+        return new Date(d.lines.asOf).toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit"
+        });
+      } catch {
+        return "";
+      }
     }
 
     function formatPctLocal(p) {
@@ -233,6 +256,11 @@
             </div>
           </div>
 
+          <div class="section-label">2026 regular-season win totals</div>
+          <p class="filter-hint" style="margin-bottom:8px">
+            Source: ${CL.escapeHtml(data.lines.source === "live" ? "Live public odds pages" : "Published consensus")}
+            ${linesAsOfLabel(data) ? " · " + CL.escapeHtml(linesAsOfLabel(data)) : ""}
+          </p>
           <div class="cfb-odds-grid section-block">
             ${teamCard(data.tech, data.lines.tech)}
             ${teamCard(data.agm, data.lines.agm)}
