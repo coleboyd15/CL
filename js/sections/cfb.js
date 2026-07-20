@@ -11,10 +11,25 @@
       error = "";
       paint();
       try {
-        data = await CL.cfb.loadTracker({ force: !!force, season: 2026 });
+        const cached = CL.cfb.getCache();
+        // Bust cache if it still has the old wrong ESPN id (264 = Washington)
+        const badCache =
+          !cached ||
+          !cached.tech ||
+          String(cached.tech.espnId) !== "2641" ||
+          /washington/i.test(cached.tech.displayName || "");
+        data = await CL.cfb.loadTracker({
+          force: !!force || badCache,
+          season: 2026
+        });
       } catch (err) {
         error = err.message || "Could not load tracker";
-        data = CL.cfb.getCache();
+        const cached = CL.cfb.getCache();
+        if (cached && cached.tech && String(cached.tech.espnId) === "2641") {
+          data = cached;
+        } else {
+          data = null;
+        }
       } finally {
         loading = false;
         paint();

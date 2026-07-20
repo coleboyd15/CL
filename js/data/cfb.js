@@ -1,6 +1,7 @@
 /* Tech vs A&M 2026 win-total tracker — ESPN schedules/records + odds math */
 (function (global) {
-  const CACHE_KEY = "cfbTracker";
+  // v2: fixed Texas Tech ESPN id (was 264 = Washington; correct is 2641)
+  const CACHE_KEY = "cfbTracker_v2";
   const HISTORY_KEY = "cfbOddsHistory";
   const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // revalidate schedules every 6h
   const DAY_MS = 24 * 60 * 60 * 1000;
@@ -8,23 +9,28 @@
   const TEAMS = {
     tech: {
       id: "tech",
-      espnId: "264",
+      // ESPN: /college-football/team/_/id/2641/texas-tech-red-raiders
+      // Note: 264 is Washington Huskies — do not use
+      espnId: "2641",
       name: "Texas Tech",
       short: "TTU",
       nick: "Red Raiders",
       conf: "Big 12",
       color: "#CC0000",
-      colorAlt: "#000000"
+      colorAlt: "#000000",
+      nameMatch: /texas tech|red raiders/i
     },
     agm: {
       id: "agm",
+      // ESPN: /college-football/team/_/id/245/texas-a&m-aggies
       espnId: "245",
       name: "Texas A&M",
       short: "TA&M",
       nick: "Aggies",
       conf: "SEC",
       color: "#500000",
-      colorAlt: "#FFFFFF"
+      colorAlt: "#FFFFFF",
+      nameMatch: /texas a&m|texas a \& m|aggies/i
     }
   };
 
@@ -178,53 +184,95 @@
     return res.json();
   }
 
-  async function fetchTeamBundle(espnId, season) {
+  function pickLogo(logos) {
+    if (!logos || !logos.length) return "";
+    const scored = logos.map((l) => {
+      const rel = (l.rel || []).join(" ").toLowerCase();
+      let score = 0;
+      if (rel.includes("default")) score += 3;
+      if (rel.includes("full")) score += 2;
+      if (rel.includes("dark") || rel.includes("scoreboard")) score += 1;
+      if (rel.includes("interior")) score -= 1;
+      return { href: l.href || "", score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0] && scored[0].href ? scored[0].href : logos[0].href || "";
+  }
+
+  async function fetchScheduleEvents(espnId, season) {
+    const base =
+      "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/" +
+      espnId +
+      "/schedule?season=" +
+      season;
+    // Regular season first; fall back to full season payload
+    const urls = [base + "&seasontype=2", base];
+    for (const url of urls) {
+      try {
+        const data = await fetchJson(url);
+        const events = (data && data.events) || [];
+        if (events.length) return events;
+      } catch (_) {
+        /* try next */
+      }
+    }
+    return [];
+  }
+
+  async function fetchTeamBundle(espnId, season, meta) {
     const teamUrl =
       "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/" + espnId;
-    const schedUrl =
-      teamUrl +
-      "/schedule?season=" +
-      season +
-      "&seasontype=2";
 
-    const [teamData, schedData] = await Promise.all([
+    const [teamData, events] = await Promise.all([
       fetchJson(teamUrl),
-      fetchJson(schedUrl).catch(() => null)
+      fetchScheduleEvents(espnId, season)
     ]);
 
     const team = teamData.team || {};
-    const logos = team.logos || [];
-    const logo =
-      (logos.find((l) => l.rel && l.rel.includes("default")) || logos[0] || {}).href || "";
+    const displayName = team.displayName || team.name || "";
+    if (meta && meta.nameMatch && displayName && !meta.nameMatch.test(displayName)) {
+      throw new Error(
+        "ESPN team mismatch for id " + espnId + ": got “" + displayName + "” (expected " + meta.name + ")"
+      );
+    }
+
+    const logo = pickLogo(team.logos) || "";
+    // Stable CDN fallback by id (works even if logos array is empty)
+    const logoFallback =
+      logo ||
+      "https://a.espncdn.com/i/teamlogos/ncaa/500/" + espnId + ".png";
 
     const recordItems = (team.record && team.record.items) || [];
     const overall =
       recordItems.find((r) => r.type === "total") ||
       recordItems[0] ||
       {};
-    const recordSummary = overall.summary || team.recordSummary || "0-0";
+    let recordSummary = overall.summary || team.recordSummary || "";
     const stats = {};
     (overall.stats || []).forEach((s) => {
       if (s.name) stats[s.name] = s.value;
     });
 
-    const events = (schedData && schedData.events) || [];
-    const games = events.map((ev) => normalizeGame(ev, espnId)).filter(Boolean);
+    const games = events
+      .map((ev) => normalizeGame(ev, espnId))
+      .filter(Boolean)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Wins/losses from completed games if record empty
+    // Wins/losses from completed games if record empty / preseason
     let wins = Number(stats.wins);
     let losses = Number(stats.losses);
-    if (Number.isNaN(wins) || Number.isNaN(losses)) {
+    if (Number.isNaN(wins) || Number.isNaN(losses) || (!recordSummary && games.length)) {
       wins = games.filter((g) => g.done && g.result === "W").length;
       losses = games.filter((g) => g.done && g.result === "L").length;
     }
+    if (!recordSummary) recordSummary = wins + "-" + losses;
 
     return {
       espnId: String(espnId),
-      displayName: team.displayName || team.name || "",
-      abbreviation: team.abbreviation || "",
-      logo,
-      color: team.color ? "#" + team.color : "",
+      displayName: displayName || (meta && meta.name) || "",
+      abbreviation: team.abbreviation || (meta && meta.short) || "",
+      logo: logoFallback,
+      color: team.color ? "#" + team.color : (meta && meta.color) || "",
       record: recordSummary,
       wins: wins || 0,
       losses: losses || 0,
@@ -247,12 +295,21 @@
         if (comp.venue.address.city) locParts.push(comp.venue.address.city);
         if (comp.venue.address.state) locParts.push(comp.venue.address.state);
       }
-      const location = locParts.join(", ") || (homeAway === "home" ? "Home" : "Away");
+      let location = locParts.join(", ");
+      if (!location) {
+        location = homeAway === "home" ? "Home" : homeAway === "away" ? "Away" : "TBD";
+      }
+      if (venue && location !== venue) {
+        location = venue + (locParts.length ? " · " + locParts.join(", ") : "");
+      }
 
       const status = (comp.status && comp.status.type) || (ev.status && ev.status.type) || {};
       const done = !!(status.completed || status.name === "STATUS_FINAL");
       const state = status.state || status.name || "";
       const date = new Date(ev.date || comp.date);
+      const tbd =
+        status.name === "STATUS_SCHEDULED" &&
+        (status.detail || "").toLowerCase().includes("tbd");
 
       let result = "";
       let score = "";
@@ -270,22 +327,39 @@
         .map((b) => (b.names && b.names[0]) || b.market || "")
         .filter(Boolean);
 
+      // Prefer higher-res opponent logo
+      const oppLogos = (opp.team && opp.team.logos) || [];
+      const opponentLogo =
+        pickLogo(oppLogos) ||
+        (opp.team && opp.team.logo) ||
+        (opp.team && opp.team.id
+          ? "https://a.espncdn.com/i/teamlogos/ncaa/500/" + opp.team.id + ".png"
+          : "");
+
+      const timeLabel = done
+        ? "Final"
+        : tbd || Number.isNaN(date.getTime())
+          ? "TBD"
+          : date.toLocaleTimeString(undefined, {
+              hour: "numeric",
+              minute: "2-digit",
+              timeZoneName: "short"
+            });
+
       return {
         id: ev.id,
         date: date.toISOString(),
-        dateLabel: date.toLocaleDateString(undefined, {
-          weekday: "short",
-          month: "short",
-          day: "numeric"
-        }),
-        timeLabel: done
-          ? "Final"
-          : date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
-        opponent: (opp.team && (opp.team.displayName || opp.team.name)) || "TBD",
-        opponentLogo:
-          (opp.team && opp.team.logos && opp.team.logos[0] && opp.team.logos[0].href) ||
-          (opp.team && opp.team.logo) ||
-          "",
+        dateLabel: Number.isNaN(date.getTime())
+          ? "TBD"
+          : date.toLocaleDateString(undefined, {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric"
+            }),
+        timeLabel,
+        opponent: (opp.team && (opp.team.displayName || opp.team.shortDisplayName || opp.team.name)) || "TBD",
+        opponentLogo,
         homeAway,
         venue,
         location,
@@ -353,13 +427,24 @@
 
     try {
       [techTeam, agmTeam] = await Promise.all([
-        fetchTeamBundle(TEAMS.tech.espnId, season),
-        fetchTeamBundle(TEAMS.agm.espnId, season)
+        fetchTeamBundle(TEAMS.tech.espnId, season, TEAMS.tech),
+        fetchTeamBundle(TEAMS.agm.espnId, season, TEAMS.agm)
       ]);
+      // Guard: never keep a cached Washington / wrong-team payload
+      if (techTeam.displayName && /washington/i.test(techTeam.displayName)) {
+        throw new Error("Texas Tech resolved to the wrong ESPN team");
+      }
     } catch (err) {
       console.warn("ESPN schedule fetch failed", err);
       scheduleError = err.message || "Schedule fetch failed";
-      if (cached && cached.tech && cached.agm) {
+      // Only reuse cache if Tech id is correct (v2)
+      const cacheOk =
+        cached &&
+        cached.tech &&
+        cached.agm &&
+        String(cached.tech.espnId) === String(TEAMS.tech.espnId) &&
+        !/washington/i.test(cached.tech.displayName || "");
+      if (cacheOk) {
         techTeam = cached.tech;
         agmTeam = cached.agm;
       } else {
