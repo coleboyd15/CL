@@ -1,96 +1,27 @@
 # CL — Couple's Lifestyle App
 
-Mobile-friendly web app: home, college football, movies, games, notes, books, recipes.
+Mobile-friendly web app: home, CFB, movies, games, notes, books, workouts.
 
 **Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream  
-
-**Live deploy:** push to GitHub → Vercel auto-updates
-
-## Open
-
-Double-click `index.html`, or:
-
-```powershell
-cd $env:USERPROFILE\Documents\CL
-npx --yes serve .
-```
-
-Use **HTTPS / Vercel / localhost** for best results.
 
 ## Features
 
 | Area | Details |
 |------|---------|
 | **Home** | Dashboard, names, day counter, quick links |
-| **CFB** | Tech vs A&M 2026 win-total tracker · implied “who wins more” · schedules |
-| **Movies** | Watched / wishlist / sort · decimal ratings · **Ask Grok** |
-| **Games** | Golf, Darts, Spades, Gin · scores + history (syncs) |
-| **8-Ball** | Under More · Magic 8-Ball |
-| **Notes** | Shared scratch-paper notes · rich text · Couple Group sync |
-| **Recipes** | Meal + drink + custom recipes · **Ask Grok** (syncs) |
+| **TTU·A&M** | 2026 win totals · who-wins-more market · schedules |
+| **Movies** | Watched / wishlist · decimal ratings · **Ask Grok** |
+| **Games** | Golf, Darts, Spades, Gin · +/− scores · history (syncs) |
+| **Notes** | Shared rich-text notes (syncs) |
+| **⛏️⛏️** | Strength maxes · 4 weekly % workouts · history (syncs) |
 | **Books** | Shelves + **Ask Grok** (syncs) |
-| **Icons** | `icons/` + `manifest.json` PWA emblem |
-| **Profile** | Couple photo/names · **Couple Group sync** · xAI API key |
-| **Day counter** | Days since Apr 11, 2026 · Month X, Day Y in header |
+| **Profile** | Couple Group Firebase sync · xAI API key |
+| **Day counter** | Days since Apr 11, 2026 · `Xd · MY DZ` (30-day months) |
 
-## Couple Group (shared sync)
+## Couple Group
 
-You and your partner share **movies, books, notes, games, recipes, and profile names** in real time via free **Firebase Realtime Database**.
+Syncs: movies, books, notes, games, workouts, profile names via Firebase Realtime Database.
 
-### One-time setup (either of you)
+## Day counter
 
-1. Open [Firebase Console](https://console.firebase.google.com/) → **Create project**
-2. **Build → Realtime Database → Create** (pick a region)
-3. **Rules** tab — for a private couple code (simple):
-
-```json
-{
-  "rules": {
-    "groups": {
-      "$code": {
-        ".read": true,
-        ".write": true
-      }
-    }
-  }
-}
-```
-
-Treat the group code like a password. Only share it with each other.
-
-4. Project settings (gear) → **Your apps** → Web → copy config  
-5. In CL: **Profile → Couple Group → Firebase setup** → paste **apiKey** + **databaseURL** → **Save**
-
-### Create / join
-
-1. Partner A: **Create couple group** → copy the 6-character code  
-2. Partner B: same Firebase project config → enter code → **Join couple group**  
-3. Edits sync automatically while online  
-
-API keys (xAI) stay on each device and are **not** synced.
-
-Optional: copy `js/firebase-config.example.js` → `js/firebase-config.js` with your keys if you prefer a file over the Profile form.
-
-## Grok
-
-1. Get a key at [console.x.ai](https://console.x.ai/)
-2. **Profile → xAI API key** → save  
-3. **Profile → Grok model** — default is **grok-4.5** (also grok-4.3, grok-build, legacy options)  
-4. Use **Ask Grok** on Movies, Recipes, Books — all use the selected model  
-
-Without a key, smart offline mode still works.
-
-## Tech vs A&M (CFB tab)
-
-2026 regular-season **win total** tracker for **Texas Tech** and **Texas A&M**:
-
-- O/U lines + American odds + implied %
-- Kalshi-style **“Who wins more RS games?”** market (Monte Carlo from the two win totals)
-- Daily trend chart (local snapshots)
-- Full schedules + records/logos from ESPN (refresh on open / **Update**)
-
-Win totals are scraped from free public odds pages (**OddsShark / FanDuel**, **VegasInsider**) via CORS proxies when needed. Fallback consensus (Jul 2026): **Tech 10.5**, **A&M 8.5**. Schedules/records from ESPN.
-
-## Header
-
-Brand shows **CL** plus the day counter (e.g. `45d · M2 D16`).
+From **April 11, 2026**: total days elapsed, then **Month Y, Day Z** where Y = full 30-day months and Z = remaining days (e.g. 100 days → `100d · M3 D10`).

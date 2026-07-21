@@ -1,7 +1,7 @@
 {
   "name": "CL — Couple Lifestyle",
   "short_name": "CL",
-  "description": "Couple lifestyle app for college football, movies, games, notes, recipes, and more.",
+  "description": "Couple lifestyle app for CFB, movies, games, notes, workouts, and more.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -12,7 +12,8 @@
     more: { title: "More", nav: "more", render: () => renderMore },
     notes: { title: "Notes", nav: "more", render: () => CL.sections.notes.render },
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
-    recipes: { title: "Recipes", nav: "more", render: () => CL.sections.recipes.render },
+    workout: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
+    workouts: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -84,10 +85,10 @@
             <p>Shelves, reviews & recs</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="recipes">
-            <span class="emoji">🍳</span>
-            <strong>Recipe Generator</strong>
-            <p>Meal + drink by cuisine</p>
+          <button type="button" class="more-card" data-go="workout">
+            <span class="emoji">⛏️⛏️</span>
+            <strong>⛏️⛏️</strong>
+            <p>Maxes · weekly strength</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="games">

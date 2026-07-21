@@ -158,34 +158,6 @@
       );
     }
 
-    if (context === "recipes") {
-      const catalog = CL.data.recipes || [];
-      const saved = CL.storage.get("recipes", []);
-      const customNames = (saved || [])
-        .filter((r) => r.custom)
-        .map((r) => r.meal || r.drink || r.name)
-        .slice(0, 20);
-      parts.push(
-        [
-          "RECIPES MODE: Create complete, cookable recipes for a couple (scaled servings).",
-          "Always include: dish name, matching drink (unless they ask meal-only or drink-only), servings, time, meal ingredients, numbered meal steps, drink ingredients, drink steps.",
-          "Respect dietary constraints, skill level, and time limits. Original recipes welcome.",
-          "Catalog inspiration: " +
-            catalog.map((r) => r.nationality + ": " + r.meal + " + " + r.drink).join(" | "),
-          "Their saved/custom recipes: " +
-            JSON.stringify(
-              (saved || []).slice(0, 15).map((r) => ({
-                meal: r.meal,
-                drink: r.drink,
-                custom: !!r.custom,
-                category: r.category
-              }))
-            ),
-          customNames.length ? "Custom titles: " + customNames.join(", ") : ""
-        ].join("\n")
-      );
-    }
-
     if (typeof options.extraSystem === "string") parts.push(options.extraSystem);
 
     return parts.join("\n\n");
@@ -225,7 +197,7 @@
       trimmed.map((m) => ({ role: m.role, content: m.content }))
     );
 
-    const maxTokens = context === "recipes" ? 2200 : 1200;
+    const maxTokens = 1200;
 
     const body = {
       model: model,
@@ -290,7 +262,6 @@
 
     if (context === "movies") return moviesReply(q);
     if (context === "books") return booksReply(q);
-    if (context === "recipes") return recipesReply(q, history);
     return generalReply(q);
   }
 
@@ -352,44 +323,12 @@
     return intro + "\n\n" + picks.map((r, i) => `${i + 1}. ${r.title} — ${r.why}`).join("\n\n");
   }
 
-  function recipesReply(q) {
-    const catalog = CL.data.recipes || [];
-    let pool = catalog.slice();
-    if (/italian/.test(q)) pool = catalog.filter((r) => r.nationality === "Italian");
-    else if (/japan|sushi|miso/.test(q)) pool = catalog.filter((r) => r.nationality === "Japanese");
-    else if (/mexican|taco/.test(q)) pool = catalog.filter((r) => r.nationality === "Mexican");
-    else if (/thai|curry/.test(q)) pool = catalog.filter((r) => r.nationality === "Thai");
-    else if (/indian|masala/.test(q)) pool = catalog.filter((r) => r.nationality === "Indian");
-    else if (/french/.test(q)) pool = catalog.filter((r) => r.nationality === "French");
-    else if (/greek/.test(q)) pool = catalog.filter((r) => r.nationality === "Greek");
-    else if (/korean/.test(q)) pool = catalog.filter((r) => r.nationality === "Korean");
-    else if (/moroccan/.test(q)) pool = catalog.filter((r) => r.nationality === "Moroccan");
-    if (!pool.length) pool = catalog;
-    const r = pool[Math.floor(Math.random() * pool.length)];
-    if (!r) return "No recipes in catalog. Add an API key for custom Grok recipes.";
-
-    const bullets = (arr) => (arr || []).map((x) => "• " + x).join("\n");
-    const steps = (arr) => (arr || []).map((x, i) => i + 1 + ". " + x).join("\n");
-    return (
-      `Offline match from the CL cookbook (${r.nationality}):\n\n` +
-      `MEAL: ${r.meal} (${r.time}, serves ${r.servings || "2"})\n` +
-      `Ingredients:\n${bullets(r.mealIngredients)}\n` +
-      `Steps:\n${steps(r.mealSteps)}\n` +
-      (r.mealLink ? `Reference: ${r.mealLink}\n` : "") +
-      `\nDRINK: ${r.drink}\n` +
-      `Ingredients:\n${bullets(r.drinkIngredients)}\n` +
-      `Steps:\n${steps(r.drinkSteps)}\n` +
-      (r.drinkLink ? `Reference: ${r.drinkLink}\n` : "") +
-      `\nFor fully custom recipes (any cuisine/diet), add your xAI key in Profile and ask again.`
-    );
-  }
-
   function generalReply(q) {
     if (/hello|hi |hey/.test(q)) {
       const n = CL.profile.displayNames();
-      return `Hey ${n.myName} & ${n.partnerName} 👋 What are we planning — dinner, a movie, notes, or something to cook?`;
+      return `Hey ${n.myName} & ${n.partnerName} 👋 What are we planning — a movie, notes, or a workout?`;
     }
-    return "Open Movies, Recipes, or Books for context-aware recs — or add an xAI API key in Profile for full live Grok chats.";
+    return "Open Movies, Books, or ⛏️⛏️ for context-aware recs — or add an xAI API key in Profile for full live Grok chats.";
   }
 
   global.CL = global.CL || {};

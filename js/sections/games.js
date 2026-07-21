@@ -461,6 +461,39 @@
     return defaultNames().slice(0, count);
   }
 
+  /** Plus/minus stepper — supports negatives for golf / spades / gin */
+  function scoreStepperHtml(inputClass, dataI, value) {
+    const v = value != null ? value : 0;
+    return `
+      <div class="score-stepper">
+        <button type="button" class="score-step-btn score-minus" aria-label="Subtract point">−</button>
+        <input type="number" class="${inputClass}" data-i="${dataI}" value="${v}" step="1" inputmode="numeric" />
+        <button type="button" class="score-step-btn score-plus" aria-label="Add point">+</button>
+      </div>`;
+  }
+
+  function bindScoreSteppers(root) {
+    root.querySelectorAll(".score-stepper").forEach((step) => {
+      const input = step.querySelector("input");
+      if (!input) return;
+      step.querySelector(".score-minus")?.addEventListener("click", () => {
+        input.value = String((Number(input.value) || 0) - 1);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      step.querySelector(".score-plus")?.addEventListener("click", () => {
+        input.value = String((Number(input.value) || 0) + 1);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+  }
+
+  function readScoreInput(inp) {
+    const raw = String(inp.value == null ? "" : inp.value).trim();
+    if (raw === "" || raw === "-") return 0;
+    const v = Number(raw);
+    return Number.isNaN(v) ? 0 : v;
+  }
+
   /* ---------- ACTIVE GAME VIEWS ---------- */
   function renderGolfPlay(root, active, paintAll) {
     const limit = active.limit || 100;
@@ -495,13 +528,14 @@
               </div>`
             : `<div class="card section-block">
                 <div class="section-label">Points this hand / round</div>
+                <p class="filter-hint" style="margin-bottom:8px">Use − / + or type negatives (e.g. −2).</p>
                 <div class="form-stack">
                   ${active.players
                     .map(
                       (p, i) => `
                     <div class="field">
                       <label>${CL.escapeHtml(p.name)} <span class="card-meta">(total ${totals(active.players)[i].total})</span></label>
-                      <input type="number" class="g-hand-score" data-i="${i}" value="0" inputmode="numeric" />
+                      ${scoreStepperHtml("g-hand-score", i, 0)}
                     </div>`
                     )
                     .join("")}
@@ -518,11 +552,12 @@
     `;
 
     bindCommon(root, active, paintAll);
+    bindScoreSteppers(root);
 
     root.querySelector("#g-submit-hand")?.addEventListener("click", () => {
       root.querySelectorAll(".g-hand-score").forEach((inp) => {
         const i = Number(inp.dataset.i);
-        const v = Number(inp.value) || 0;
+        const v = readScoreInput(inp);
         active.players[i].scores.push(v);
       });
       persistActive(active);
@@ -682,13 +717,14 @@
               </div>`
             : `<div class="card section-block">
                 <div class="section-label">Scores for this hand / round</div>
+                <p class="filter-hint" style="margin-bottom:8px">Use − / + or type negatives.</p>
                 <div class="form-stack">
                   ${active.players
                     .map(
                       (p, i) => `
                     <div class="field">
                       <label>${CL.escapeHtml(p.name)}</label>
-                      <input type="number" class="g-round-score" data-i="${i}" value="0" inputmode="numeric" />
+                      ${scoreStepperHtml("g-round-score", i, 0)}
                     </div>`
                     )
                     .join("")}
@@ -705,11 +741,12 @@
     `;
 
     bindCommon(root, active, paintAll);
+    bindScoreSteppers(root);
 
     root.querySelector("#g-submit-round")?.addEventListener("click", () => {
       root.querySelectorAll(".g-round-score").forEach((inp) => {
         const i = Number(inp.dataset.i);
-        const v = Number(inp.value) || 0;
+        const v = readScoreInput(inp);
         active.players[i].scores.push(v);
       });
       persistActive(active);

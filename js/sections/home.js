@@ -27,7 +27,7 @@
                   ${
                     profile.coupleName
                       ? CL.escapeHtml(profile.coupleName)
-                      : "CFB, films, notes, recipes & more"
+                      : "CFB, films, notes, lifts & more"
                   }
                   ${profile.anniversary ? ` · since ${CL.escapeHtml(profile.anniversary)}` : ""}
                 </p>
@@ -98,10 +98,10 @@
                 <strong>Books</strong>
                 <span>Book club</span>
               </a>
-              <a href="#recipes" class="quick-card">
-                <span class="emoji">🍳</span>
-                <strong>Recipes</strong>
-                <span>Cook together</span>
+              <a href="#workout" class="quick-card">
+                <span class="emoji">⛏️⛏️</span>
+                <strong>⛏️⛏️</strong>
+                <span>Strength week</span>
               </a>
               <a href="#profile" class="quick-card">
                 <span class="emoji">💕</span>
