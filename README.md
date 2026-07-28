@@ -10,12 +10,12 @@ Mobile-friendly web app: home, CFB, movies, games, notes, books, workouts.
 |------|---------|
 | **Home** | Dashboard, names, day counter, quick links |
 | **TTU·A&M** | 2026 win totals · who-wins-more market · schedules |
-| **Movies** | Watched / wishlist · decimal ratings · **Ask Grok** |
-| **Games** | Golf, Darts, Spades, Gin · +/− scores · history (syncs) |
+| **Movies** | Watched / ranked wishlist (drag to reorder) · decimal ratings |
+| **Games** | Golf, Darts, Spades, Gin · +/− scores · permanent history (syncs) |
 | **Notes** | Shared rich-text notes (syncs) |
 | **⛏️⛏️** | Strength maxes · 4 weekly % workouts · history (syncs) |
-| **Books** | Shelves + **Ask Grok** (syncs) |
-| **Profile** | Couple Group Firebase sync · xAI API key |
+| **Books** | Shelves · reviews (syncs) |
+| **Profile** | Couple Group Firebase sync |
 | **Day counter** | Days since Apr 11, 2026 · `Xd · MY DZ` (30-day months) |
 
 ## Couple Group

@@ -291,8 +291,13 @@
     `;
   }
 
+  /**
+   * Permanently end a game: write history, clear active, force-persist.
+   * Call this whenever a match is completed so reopen never resumes it.
+   */
   function finishGame(active, winnerName, loserName) {
-    const data = load();
+    if (!active) return null;
+
     const final = totals(active.players);
     const record = {
       id: CL.uid("gm"),
@@ -307,10 +312,50 @@
       endedAt: Date.now(),
       startedAt: active.startedAt
     };
-    data.history = [record].concat(data.history || []).slice(0, HISTORY_LIMIT);
+
+    // Atomic write from latest storage so we never leave a stale active game
+    const data = load();
+    const history = Array.isArray(data.history) ? data.history.slice() : [];
+    // Avoid double-recording the same in-progress match if already finished
+    const already = history.some(
+      (h) =>
+        h &&
+        h.startedAt &&
+        active.startedAt &&
+        h.startedAt === active.startedAt &&
+        h.type === active.type
+    );
+    if (!already) {
+      history.unshift(record);
+    }
+    const next = {
+      active: null,
+      history: history.slice(0, HISTORY_LIMIT)
+    };
+    save(next);
+
+    // Hard verify: if anything re-wrote active (sync race), clear again
+    try {
+      const verify = load();
+      if (verify.active) {
+        verify.active = null;
+        if (!Array.isArray(verify.history)) verify.history = [];
+        if (!verify.history.some((h) => h && h.id === record.id) && !already) {
+          verify.history.unshift(record);
+          verify.history = verify.history.slice(0, HISTORY_LIMIT);
+        }
+        save(verify);
+      }
+    } catch (_) {}
+
+    return already ? null : record;
+  }
+
+  /** Clear active without history (abandon / discard). */
+  function clearActive() {
+    const data = load();
     data.active = null;
     save(data);
-    return record;
   }
 
   /** Golf card game: first player to reach/exceed limit loses. If several in one hand, highest total loses. */
@@ -560,11 +605,16 @@
         const v = readScoreInput(inp);
         active.players[i].scores.push(v);
       });
-      persistActive(active);
       const who = checkGolfLoser(active);
       if (who) {
-        CL.toast(who + " hit the limit — loses!");
+        // Permanently end + history right away so reopen never resumes
+        const W = golfWinnerWhenLoser(active, who);
+        finishGame(active, W, who);
+        CL.toast(who + " loses — saved to history");
+        paintAll("hub");
+        return;
       }
+      persistActive(active);
       paintAll("play");
     });
 
@@ -572,7 +622,7 @@
       const L = checkGolfLoser(active);
       const W = L ? golfWinnerWhenLoser(active, L) : winnerLowest(active.players);
       finishGame(active, W, L);
-      CL.toast(L ? L + " recorded as loser" : "Saved");
+      CL.toast(L ? L + " recorded as loser" : "Saved to history");
       paintAll("hub");
     });
   }
@@ -672,8 +722,13 @@
       active.log = active.log || [];
       active.log.push({ player: p.name, scored, bust, left: nextLeft });
       if (nextLeft === 0) {
-        persistActive(active);
-        paintAll();
+        // Game complete — store points scored and clear active permanently
+        active.players.forEach((pl) => {
+          pl.scores = [active.startScore - (pl.remaining != null ? pl.remaining : active.startScore)];
+        });
+        finishGame(active, p.name);
+        CL.toast(p.name + " wins — saved to history");
+        paintAll("hub");
         return;
       }
       active.turn = (turn + 1) % active.players.length;
@@ -683,10 +738,11 @@
 
     root.querySelector("#g-finish")?.addEventListener("click", () => {
       // Store inverted scores for history totals as points scored
+      const winName = winner ? winner.name : winnerHighest(active.players);
       active.players.forEach((p) => {
-        p.scores = [active.startScore - p.remaining];
+        p.scores = [active.startScore - (p.remaining != null ? p.remaining : active.startScore)];
       });
-      finishGame(active, winner.name);
+      finishGame(active, winName);
       CL.toast("Saved to history");
       paintAll("hub");
     });
@@ -749,11 +805,15 @@
         const v = readScoreInput(inp);
         active.players[i].scores.push(v);
       });
-      persistActive(active);
       const w = checkWinner(active);
       if (w) {
-        CL.toast(w + " reached the limit!");
+        // Permanently end so reopen never resumes as ongoing
+        finishGame(active, w);
+        CL.toast(w + " wins — saved to history");
+        paintAll("hub");
+        return;
       }
+      persistActive(active);
       paintAll();
     });
 
@@ -796,6 +856,11 @@
   }
 
   function persistActive(active) {
+    // Never re-save a game that was already finished
+    if (!active) {
+      clearActive();
+      return;
+    }
     const data = load();
     data.active = active;
     save(data);
@@ -812,9 +877,7 @@
     });
     root.querySelector("#g-abandon")?.addEventListener("click", () => {
       if (!confirm("Abandon this game without saving?")) return;
-      const data = load();
-      data.active = null;
-      save(data);
+      clearActive();
       CL.toast("Game abandoned");
       paintAll("hub");
     });
@@ -899,9 +962,8 @@
     root.querySelector("#g-resume")?.addEventListener("click", () => paintAll("play"));
     root.querySelector("#g-drop")?.addEventListener("click", () => {
       if (!confirm("Discard the active game?")) return;
-      const d = load();
-      d.active = null;
-      save(d);
+      clearActive();
+      CL.toast("Game discarded");
       paintAll("hub");
     });
 

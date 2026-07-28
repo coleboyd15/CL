@@ -9,6 +9,13 @@
     CL.storage.set("movies", data);
   }
 
+  /** Keep wishlist order stable and assign rank 1..n from array position. */
+  function normalizeWishlistRanks(list) {
+    return (list || []).map((m, i) =>
+      Object.assign({}, m, { rank: i + 1 })
+    );
+  }
+
   function yearWatchedOf(m) {
     if (m.watchedYear != null && !Number.isNaN(Number(m.watchedYear))) {
       return Number(m.watchedYear);
@@ -44,7 +51,7 @@
     return arr;
   }
 
-  function movieCard(m, mode) {
+  function movieCard(m, mode, rank) {
     const yw = yearWatchedOf(m);
     const ratingHtml =
       m.rating != null && Number(m.rating) > 0
@@ -52,31 +59,47 @@
         : mode === "wish"
           ? '<span class="tag wish">Wishlist</span>'
           : "";
+    const body = `
+      <div class="row-between">
+        <div>
+          <div class="card-title">${CL.escapeHtml(m.title)}${
+            m.year ? ` <span class="card-meta">(${CL.escapeHtml(String(m.year))})</span>` : ""
+          }</div>
+          ${
+            mode === "watched" && yw
+              ? `<div class="card-meta">Watched ${CL.escapeHtml(String(yw))}</div>`
+              : ""
+          }
+          ${ratingHtml}
+        </div>
+      </div>
+      ${m.review ? `<p class="review-text">“${CL.escapeHtml(m.review)}”</p>` : ""}
+      <div class="card-actions">
+        ${
+          mode === "wish"
+            ? `<button type="button" class="btn btn-primary btn-sm btn-to-watched">Mark watched</button>
+               <button type="button" class="btn btn-ghost btn-sm btn-remove">Remove</button>`
+            : `<button type="button" class="btn btn-secondary btn-sm btn-edit">Edit</button>
+               <button type="button" class="btn btn-ghost btn-sm btn-remove">Remove</button>`
+        }
+      </div>
+    `;
+
+    if (mode === "wish") {
+      return `
+        <article class="card wish-card" data-id="${CL.escapeHtml(m.id)}" data-mode="wish" data-rank="${rank}" draggable="false">
+          <div class="wish-card-inner">
+            <div class="wish-rank" aria-label="Rank ${rank}">${rank}</div>
+            <div class="wish-card-body">${body}</div>
+            <div class="wish-drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</div>
+          </div>
+        </article>
+      `;
+    }
+
     return `
       <article class="card" data-id="${CL.escapeHtml(m.id)}" data-mode="${mode}">
-        <div class="row-between">
-          <div>
-            <div class="card-title">${CL.escapeHtml(m.title)}${
-              m.year ? ` <span class="card-meta">(${CL.escapeHtml(String(m.year))})</span>` : ""
-            }</div>
-            ${
-              mode === "watched" && yw
-                ? `<div class="card-meta">Watched ${CL.escapeHtml(String(yw))}</div>`
-                : ""
-            }
-            ${ratingHtml}
-          </div>
-        </div>
-        ${m.review ? `<p class="review-text">“${CL.escapeHtml(m.review)}”</p>` : ""}
-        <div class="card-actions">
-          ${
-            mode === "wish"
-              ? `<button type="button" class="btn btn-primary btn-sm btn-to-watched">Mark watched</button>
-                 <button type="button" class="btn btn-ghost btn-sm btn-remove">Remove</button>`
-              : `<button type="button" class="btn btn-secondary btn-sm btn-edit">Edit</button>
-                 <button type="button" class="btn btn-ghost btn-sm btn-remove">Remove</button>`
-          }
-        </div>
+        ${body}
       </article>
     `;
   }
@@ -94,25 +117,29 @@
     `;
   }
 
-  function sortBarHtml(sortBy, tab) {
-    if (tab === "recs") return "";
+  function sortBarHtml(sortBy) {
     return `
       <div class="movies-sort-bar">
         <label for="mv-sort">Sort</label>
         <select id="mv-sort">
-          ${
-            tab === "watched"
-              ? `
-            <option value="rating" ${sortBy === "rating" ? "selected" : ""}>Ranking (highest first)</option>
-            <option value="title" ${sortBy === "title" ? "selected" : ""}>Title (A–Z)</option>
-            <option value="year" ${sortBy === "year" ? "selected" : ""}>Year watched</option>
-          `
-              : `
-            <option value="title" ${sortBy === "title" || sortBy === "rating" ? "selected" : ""}>Title (A–Z)</option>
-            <option value="year" ${sortBy === "year" ? "selected" : ""}>Year added</option>
-          `
-          }
+          <option value="rating" ${sortBy === "rating" ? "selected" : ""}>Ranking (highest first)</option>
+          <option value="title" ${sortBy === "title" ? "selected" : ""}>Title (A–Z)</option>
+          <option value="year" ${sortBy === "year" ? "selected" : ""}>Year watched</option>
         </select>
+      </div>
+    `;
+  }
+
+  function wishlistToolbarHtml(editMode, count) {
+    if (!count) return "";
+    return `
+      <div class="wish-toolbar">
+        <p class="card-meta" style="margin:0">
+          ${editMode ? "Drag movies up or down to set watch order. Rankings update automatically." : "Ranked in the order you want to watch."}
+        </p>
+        <button type="button" class="btn ${editMode ? "btn-primary" : "btn-secondary"} btn-sm" id="mv-wish-edit">
+          ${editMode ? "Done" : "Edit order"}
+        </button>
       </div>
     `;
   }
@@ -220,21 +247,82 @@
     };
   }
 
+  function bindWishlistDrag(listEl, onReorder) {
+    let dragId = null;
+
+    listEl.querySelectorAll(".wish-card").forEach((card) => {
+      card.setAttribute("draggable", "true");
+
+      card.addEventListener("dragstart", (e) => {
+        dragId = card.dataset.id;
+        card.classList.add("wish-dragging");
+        try {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", dragId);
+        } catch (_) {}
+      });
+
+      card.addEventListener("dragend", () => {
+        card.classList.remove("wish-dragging");
+        listEl.querySelectorAll(".wish-card").forEach((c) => c.classList.remove("wish-drag-over"));
+        dragId = null;
+      });
+
+      card.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (!dragId || card.dataset.id === dragId) return;
+        card.classList.add("wish-drag-over");
+        try {
+          e.dataTransfer.dropEffect = "move";
+        } catch (_) {}
+      });
+
+      card.addEventListener("dragleave", () => {
+        card.classList.remove("wish-drag-over");
+      });
+
+      card.addEventListener("drop", (e) => {
+        e.preventDefault();
+        card.classList.remove("wish-drag-over");
+        const fromId = dragId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+        const toId = card.dataset.id;
+        if (!fromId || !toId || fromId === toId) return;
+
+        const cards = Array.from(listEl.querySelectorAll(".wish-card"));
+        const ids = cards.map((c) => c.dataset.id);
+        const fromIdx = ids.indexOf(fromId);
+        const toIdx = ids.indexOf(toId);
+        if (fromIdx < 0 || toIdx < 0) return;
+
+        ids.splice(fromIdx, 1);
+        ids.splice(toIdx, 0, fromId);
+        onReorder(ids);
+      });
+    });
+  }
+
   function render(root) {
     let tab = CL.storage.get("moviesTab", "watched");
     let sortBy = CL.storage.get(SORT_KEY, "rating");
+    let wishEditMode = false;
 
     function paint() {
       const data = getData();
+      // Normalize ranks once so storage always has ordered ranks
+      if (data.wishlist && data.wishlist.length) {
+        const normalized = normalizeWishlistRanks(data.wishlist);
+        const changed = normalized.some((m, i) => (data.wishlist[i] && data.wishlist[i].rank) !== m.rank);
+        if (changed) {
+          data.wishlist = normalized;
+          setData(data);
+        }
+      }
+
       const watched = data.watched || [];
       const wishlist = data.wishlist || [];
       const catalog = CL.data.movies || [];
       const known = new Set([...watched, ...wishlist].map((m) => m.title.toLowerCase()));
       const suggest = catalog.filter((m) => !known.has(m.title.toLowerCase()));
-
-      // Wishlist default sort title if rating sort selected
-      const effectiveSort =
-        tab === "wishlist" && sortBy === "rating" ? "title" : sortBy;
 
       root.innerHTML = `
         <section class="page">
@@ -242,7 +330,7 @@
             <h1 class="page-title" style="margin:0">Movies</h1>
             <button type="button" class="btn btn-primary btn-sm" id="mv-add">+ Add</button>
           </div>
-          <p class="page-sub">Watched, wishlist, ratings &amp; Grok recs</p>
+          <p class="page-sub">Watched, wishlist &amp; ratings</p>
 
           <div class="tabs" role="tablist">
             <button type="button" class="tab ${tab === "watched" ? "active" : ""}" data-tab="watched">Watched (${watched.length})</button>
@@ -251,26 +339,27 @@
           </div>
 
           <div id="mv-panel"></div>
-          <div id="mv-chat"></div>
         </section>
       `;
 
       const panel = root.querySelector("#mv-panel");
 
       if (tab === "watched") {
-        const sorted = sortMovies(watched, effectiveSort);
+        const sorted = sortMovies(watched, sortBy);
         panel.innerHTML = watched.length
-          ? `${sortBarHtml(effectiveSort, tab)}<div class="stack-sm">${sorted
+          ? `${sortBarHtml(sortBy)}<div class="stack-sm">${sorted
               .map((m) => movieCard(m, "watched"))
               .join("")}</div>`
           : `<div class="empty"><div class="emoji">🎬</div><p>No watched movies yet. Add your first date-night film.</p>
              <button type="button" class="btn btn-primary btn-sm" id="mv-add-empty">+ Add movie</button></div>`;
       } else if (tab === "wishlist") {
-        const sorted = sortMovies(wishlist, effectiveSort === "rating" ? "title" : effectiveSort);
+        // Order is watch ranking — no title/date sort options
+        const ordered = normalizeWishlistRanks(wishlist);
         panel.innerHTML = wishlist.length
-          ? `${sortBarHtml(effectiveSort === "rating" ? "title" : effectiveSort, tab)}<div class="stack-sm">${sorted
-              .map((m) => movieCard(m, "wish"))
-              .join("")}</div>`
+          ? `${wishlistToolbarHtml(wishEditMode, wishlist.length)}
+             <div class="stack-sm wish-list ${wishEditMode ? "wish-edit-mode" : ""}" id="mv-wish-list">${ordered
+               .map((m, i) => movieCard(m, "wish", i + 1))
+               .join("")}</div>`
           : `<div class="empty"><div class="emoji">✨</div><p>Wishlist is empty. Save something for next weekend.</p></div>`;
       } else {
         panel.innerHTML = `
@@ -285,6 +374,7 @@
       root.querySelectorAll(".tab").forEach((t) => {
         t.addEventListener("click", () => {
           tab = t.dataset.tab;
+          wishEditMode = false;
           CL.storage.set("moviesTab", tab);
           paint();
         });
@@ -296,19 +386,45 @@
         paint();
       });
 
+      panel.querySelector("#mv-wish-edit")?.addEventListener("click", () => {
+        wishEditMode = !wishEditMode;
+        paint();
+      });
+
+      if (tab === "wishlist" && wishEditMode) {
+        const listEl = panel.querySelector("#mv-wish-list");
+        if (listEl) {
+          bindWishlistDrag(listEl, (orderedIds) => {
+            const d = getData();
+            const byId = {};
+            (d.wishlist || []).forEach((m) => {
+              byId[m.id] = m;
+            });
+            d.wishlist = normalizeWishlistRanks(
+              orderedIds.map((id) => byId[id]).filter(Boolean)
+            );
+            setData(d);
+            CL.toast("Order updated");
+            paint();
+          });
+        }
+      }
+
       const addBtn = root.querySelector("#mv-add");
       const addEmpty = root.querySelector("#mv-add-empty");
       const openAdd = () =>
         openMovieForm(null, (movie) => {
           const d = getData();
           if (movie.list === "wishlist") {
-            d.wishlist = (d.wishlist || []).concat({
-              id: movie.id,
-              title: movie.title,
-              year: movie.year,
-              review: movie.review,
-              addedAt: movie.addedAt
-            });
+            d.wishlist = normalizeWishlistRanks(
+              (d.wishlist || []).concat({
+                id: movie.id,
+                title: movie.title,
+                year: movie.year,
+                review: movie.review,
+                addedAt: movie.addedAt
+              })
+            );
           } else {
             d.watched = (d.watched || []).concat(moviePayload(movie));
           }
@@ -327,8 +443,11 @@
         const d = getData();
 
         card.querySelector(".btn-remove")?.addEventListener("click", () => {
-          if (mode === "wish") d.wishlist = d.wishlist.filter((m) => m.id !== id);
-          else d.watched = d.watched.filter((m) => m.id !== id);
+          if (mode === "wish") {
+            d.wishlist = normalizeWishlistRanks(d.wishlist.filter((m) => m.id !== id));
+          } else {
+            d.watched = d.watched.filter((m) => m.id !== id);
+          }
           setData(d);
           CL.toast("Removed");
           paint();
@@ -337,7 +456,7 @@
         card.querySelector(".btn-to-watched")?.addEventListener("click", () => {
           const item = d.wishlist.find((m) => m.id === id);
           if (!item) return;
-          d.wishlist = d.wishlist.filter((m) => m.id !== id);
+          d.wishlist = normalizeWishlistRanks(d.wishlist.filter((m) => m.id !== id));
           openMovieForm(
             Object.assign({}, item, { _list: "watched", rating: 0 }),
             (movie) => {
@@ -374,13 +493,15 @@
 
         card.querySelector(".btn-add-wish").addEventListener("click", () => {
           const d = getData();
-          d.wishlist = (d.wishlist || []).concat({
-            id: CL.uid("mv"),
-            title: item.title,
-            year: item.year,
-            review: "",
-            addedAt: Date.now()
-          });
+          d.wishlist = normalizeWishlistRanks(
+            (d.wishlist || []).concat({
+              id: CL.uid("mv"),
+              title: item.title,
+              year: item.year,
+              review: "",
+              addedAt: Date.now()
+            })
+          );
           setData(d);
           CL.toast("Added to wishlist");
           paint();
@@ -400,13 +521,6 @@
             }
           );
         });
-      });
-
-      CL.chat.create(root.querySelector("#mv-chat"), {
-        context: "movies",
-        placeholder: "e.g. cozy romance after a long week",
-        welcome:
-          "Ask for movie ideas based on what you've watched and rated (decimals welcome). Try: “something feel-good” or “mind-bending sci-fi”."
       });
     }
 

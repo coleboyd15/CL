@@ -5,12 +5,22 @@
       const names = CL.profile.displayNames();
       const greet = CL.profile.greeting();
       const label = CL.profile.coupleLabel();
-      const hasKey = !!(CL.profile.getSettings().xaiApiKey || "").trim();
       const day = CL.daycount ? CL.daycount.formatLong() : "";
 
       const welcomeLine = CL.profile.hasNames()
         ? `${greet}, ${CL.escapeHtml(names.myName)} & ${CL.escapeHtml(names.partnerName)}`
         : `${greet} — welcome to CL`;
+
+      // Only show couple nickname / anniversary — no default marketing subtitle
+      let subLine = "";
+      if (profile.coupleName) {
+        subLine = CL.escapeHtml(profile.coupleName);
+        if (profile.anniversary) {
+          subLine += ` · since ${CL.escapeHtml(profile.anniversary)}`;
+        }
+      } else if (profile.anniversary) {
+        subLine = `Since ${CL.escapeHtml(profile.anniversary)}`;
+      }
 
       root.innerHTML = `
         <section class="page home-page">
@@ -23,14 +33,11 @@
               <div class="home-hero-text">
                 <p class="home-kicker">CL</p>
                 <h1 class="page-title home-title">${welcomeLine}</h1>
-                <p class="page-sub" style="margin-bottom:0">
-                  ${
-                    profile.coupleName
-                      ? CL.escapeHtml(profile.coupleName)
-                      : "CFB, films, notes, lifts & more"
-                  }
-                  ${profile.anniversary ? ` · since ${CL.escapeHtml(profile.anniversary)}` : ""}
-                </p>
+                ${
+                  subLine
+                    ? `<p class="page-sub" style="margin-bottom:0">${subLine}</p>`
+                    : ""
+                }
                 ${day ? `<p class="card-meta" style="margin-top:6px">${CL.escapeHtml(day)}</p>` : ""}
               </div>
             </div>
@@ -39,10 +46,6 @@
                 ? `<p class="home-bio">${CL.escapeHtml(profile.bio)}</p>`
                 : ""
             }
-            <div class="home-status chips" style="margin-top:12px">
-              <span class="chip active">🏈 Tech vs A&amp;M</span>
-              <span class="chip ${hasKey ? "active" : ""}">${hasKey ? "✦ Grok API ready" : "✦ Grok offline mode"}</span>
-            </div>
           </div>
 
           ${
@@ -120,7 +123,7 @@
               </button>
               <button type="button" class="card home-action" data-go="movies">
                 <strong>Movie night?</strong>
-                <p class="card-meta">Check wishlist or get a recommendation</p>
+                <p class="card-meta">Check wishlist or mark something watched</p>
               </button>
               <button type="button" class="card home-action" data-go="notes">
                 <strong>Jot a note</strong>

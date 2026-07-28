@@ -149,6 +149,40 @@
     return data;
   }
 
+  /**
+   * Merge local + remote games so finished matches stay finished.
+   * History is unioned by id; active is dropped if that match already ended.
+   */
+  function mergeGamesData(local, remote) {
+    local = local || { active: null, history: [] };
+    remote = remote || { active: null, history: [] };
+    const byId = {};
+    (local.history || []).concat(remote.history || []).forEach((h) => {
+      if (h && h.id) byId[h.id] = h;
+    });
+    const history = Object.keys(byId)
+      .map((id) => byId[id])
+      .sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0))
+      .slice(0, 200);
+
+    function alreadyFinished(active) {
+      if (!active || !active.startedAt) return false;
+      return history.some(
+        (h) => h && h.startedAt === active.startedAt && h.type === active.type
+      );
+    }
+
+    let active = null;
+    // Prefer remote active only if not already finished; else keep local unfinished
+    if (remote.active && !alreadyFinished(remote.active)) {
+      active = remote.active;
+    } else if (local.active && !alreadyFinished(local.active)) {
+      active = local.active;
+    }
+
+    return { active: active || null, history };
+  }
+
   function applyRemoteData(remote) {
     if (!remote || typeof remote !== "object") return;
     applyingRemote = true;
@@ -160,6 +194,10 @@
           if (k === "profile") {
             const local = CL.storage.get("profile", {}) || {};
             val = Object.assign({}, local, val);
+          }
+          // Games: merge history by id; never revive an active game already in history
+          if (k === "games" && val && typeof val === "object") {
+            val = mergeGamesData(CL.storage.get("games", { active: null, history: [] }), val);
           }
           CL.storage.set(k, val, { remote: true });
         }
@@ -328,6 +366,12 @@
         if (k === "profile") {
           const local = CL.storage.get("profile", {}) || {};
           const merged = Object.assign({}, local, remoteData[k]);
+          CL.storage.set(k, merged, { remote: true });
+        } else if (k === "games") {
+          const merged = mergeGamesData(
+            CL.storage.get("games", { active: null, history: [] }),
+            remoteData[k]
+          );
           CL.storage.set(k, merged, { remote: true });
         } else {
           CL.storage.set(k, remoteData[k], { remote: true });

@@ -88,14 +88,13 @@
             <h1 class="page-title" style="margin:0">Book Club</h1>
             <button type="button" class="btn btn-primary btn-sm" id="bk-add">+ Add</button>
           </div>
-          <p class="page-sub">Read · current · wishlist + Grok recs</p>
+          <p class="page-sub">Read · currently reading · wishlist</p>
           <div class="tabs">
             <button type="button" class="tab ${tab === "current" ? "active" : ""}" data-tab="current">Current (${(d.current || []).length})</button>
             <button type="button" class="tab ${tab === "read" ? "active" : ""}" data-tab="read">Read (${(d.read || []).length})</button>
             <button type="button" class="tab ${tab === "wishlist" ? "active" : ""}" data-tab="wishlist">Wish (${(d.wishlist || []).length})</button>
           </div>
           <div id="bk-panel"></div>
-          <div id="bk-chat"></div>
         </section>
       `;
 
@@ -181,11 +180,6 @@
         });
       });
 
-      CL.chat.create(root.querySelector("#bk-chat"), {
-        context: "books",
-        placeholder: "e.g. something short and weirdly tender",
-        welcome: "Ask for book recommendations based on what you've read and rated."
-      });
     }
 
     paint();

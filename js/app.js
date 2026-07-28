@@ -64,7 +64,7 @@
           <button type="button" class="more-card" data-go="profile">
             <span class="emoji">💕</span>
             <strong>Profile & Settings</strong>
-            <p>Names, couple group, Grok API</p>
+            <p>Names & couple group</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="cfb">
@@ -108,7 +108,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile, track Tech vs A&amp;M win totals, and add an xAI key for live Grok.
+            (Firebase). Set names under Profile and track Tech vs A&amp;M win totals, movies, games, notes &amp; workouts.
           </p>
         </div>
       </section>
