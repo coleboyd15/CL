@@ -181,13 +181,23 @@
       }
     }
 
-    // Full-screen pink & green CPA fireworks once (first open only)
-    if (CL.celebration && !CL.celebration.hasSeen()) {
-      CL.celebration.show(() => {
-        location.replace("#home");
+    // Full-screen pink & green fireworks every app open (new session) and daily
+    try {
+      if (
+        CL.celebration &&
+        typeof CL.celebration.show === "function" &&
+        typeof CL.celebration.shouldShow === "function" &&
+        CL.celebration.shouldShow()
+      ) {
+        CL.celebration.show(() => {
+          location.replace("#home");
+          bootApp();
+        });
+      } else {
         bootApp();
-      });
-    } else {
+      }
+    } catch (err) {
+      console.warn("Celebration failed:", err);
       bootApp();
     }
 

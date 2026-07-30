@@ -1,23 +1,56 @@
-/* One-time CPA celebration — pink & green fireworks for Lauren Wax */
+/* Daily CPA celebration — pink & green fireworks for Lauren Wax */
 (function (global) {
-  const SEEN_KEY = "cpaCelebrateSeen";
+  const DAY_KEY = "cpaCelebrateDay";
+  const SESSION_KEY = "cl_cpa_celebrate_session";
+
+  function todayKey() {
+    const d = new Date();
+    return (
+      d.getFullYear() +
+      "-" +
+      String(d.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(d.getDate()).padStart(2, "0")
+    );
+  }
+
+  /**
+   * Show on every new app open (browser session), and at least once per calendar day.
+   * sessionStorage → again after tab/app is fully closed and reopened.
+   * localStorage day key → also forces once per day even if session lingered overnight.
+   */
+  function shouldShow() {
+    try {
+      const day = todayKey();
+      const lastDay = CL.storage.get(DAY_KEY, "");
+      if (lastDay !== day) return true;
+      // Same day: still show once per fresh session (app reopen)
+      if (!sessionStorage.getItem(SESSION_KEY)) return true;
+      return false;
+    } catch {
+      return true;
+    }
+  }
 
   function hasSeen() {
-    try {
-      return !!CL.storage.get(SEEN_KEY, false);
-    } catch {
-      return false;
-    }
+    return !shouldShow();
   }
 
   function markSeen() {
     try {
-      CL.storage.set(SEEN_KEY, true, { skipSync: true });
+      CL.storage.set(DAY_KEY, todayKey(), { skipSync: true });
+      sessionStorage.setItem(SESSION_KEY, "1");
     } catch (_) {}
   }
 
   function show(onDone) {
-    if (hasSeen()) {
+    if (!shouldShow()) {
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+
+    // Avoid stacking if called twice
+    if (document.querySelector(".cpa-celebrate")) {
       if (typeof onDone === "function") onDone();
       return;
     }
@@ -31,11 +64,9 @@
       <canvas class="cpa-fw-canvas" aria-hidden="true"></canvas>
       <div class="cpa-celebrate-inner">
         <div class="cpa-celebrate-badge" aria-hidden="true">🎉 💚 💖 🎉</div>
-        <p class="cpa-celebrate-kicker">She did it</p>
         <h1 class="cpa-celebrate-title">Congratulations to Lauren Wax, worlds hottest CPA</h1>
-        <p class="cpa-celebrate-sub">Pink &amp; green fireworks · certified legend · #1 forever</p>
         <button type="button" class="btn btn-primary btn-block cpa-celebrate-btn" id="cpa-continue">
-          Let’s go!
+          Continue
         </button>
       </div>
     `;
@@ -54,13 +85,16 @@
     const GREENS = ["#00c853", "#69f0ae", "#1de9b6", "#00e676", "#76ff03", "#a5d6a7"];
 
     function resize() {
-      W = canvas.width = window.innerWidth * (window.devicePixelRatio || 1);
-      H = canvas.height = window.innerHeight * (window.devicePixelRatio || 1);
-      canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight + "px";
-      ctx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
-      W = window.innerWidth;
-      H = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cssW = window.innerWidth;
+      const cssH = window.innerHeight;
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      canvas.style.width = cssW + "px";
+      canvas.style.height = cssH + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      W = cssW;
+      H = cssH;
     }
 
     function rand(a, b) {
@@ -74,20 +108,20 @@
 
     function spawnRocket() {
       rockets.push({
-        x: rand(W * 0.1, W * 0.9),
+        x: rand(W * 0.08, W * 0.92),
         y: H + 10,
-        vx: rand(-0.8, 0.8),
-        vy: rand(-11, -7.5),
+        vx: rand(-0.9, 0.9),
+        vy: rand(-12, -8),
         color: pickColor(),
         trail: []
       });
     }
 
     function explode(x, y, color) {
-      const n = 48 + ((Math.random() * 36) | 0);
+      const n = 52 + ((Math.random() * 40) | 0);
       for (let i = 0; i < n; i++) {
-        const angle = (Math.PI * 2 * i) / n + rand(-0.1, 0.1);
-        const speed = rand(1.5, 6.5);
+        const angle = (Math.PI * 2 * i) / n + rand(-0.12, 0.12);
+        const speed = rand(1.6, 7);
         particles.push({
           x,
           y,
@@ -96,13 +130,12 @@
           life: 1,
           decay: rand(0.012, 0.028),
           color: Math.random() < 0.35 ? pickColor() : color,
-          size: rand(1.5, 3.2)
+          size: rand(1.6, 3.4)
         });
       }
-      // Extra glitter ring
-      for (let i = 0; i < 18; i++) {
+      for (let i = 0; i < 20; i++) {
         const angle = rand(0, Math.PI * 2);
-        const speed = rand(0.5, 2.2);
+        const speed = rand(0.5, 2.4);
         particles.push({
           x,
           y,
@@ -111,7 +144,7 @@
           life: 1,
           decay: rand(0.008, 0.02),
           color: Math.random() < 0.5 ? "#ffffff" : color,
-          size: rand(1, 2)
+          size: rand(1, 2.2)
         });
       }
     }
@@ -119,36 +152,36 @@
     let spawnTimer = 0;
     function frame() {
       if (!running) return;
-      ctx.fillStyle = "rgba(20, 8, 24, 0.22)";
+      ctx.fillStyle = "rgba(20, 8, 24, 0.2)";
       ctx.fillRect(0, 0, W, H);
 
       spawnTimer--;
-      if (spawnTimer <= 0 && rockets.length < 6) {
+      if (spawnTimer <= 0 && rockets.length < 7) {
         spawnRocket();
-        if (Math.random() < 0.55) spawnRocket();
-        spawnTimer = 12 + ((Math.random() * 18) | 0);
+        if (Math.random() < 0.6) spawnRocket();
+        spawnTimer = 10 + ((Math.random() * 16) | 0);
       }
 
       for (let i = rockets.length - 1; i >= 0; i--) {
         const r = rockets[i];
         r.x += r.vx;
         r.y += r.vy;
-        r.vy += 0.12;
+        r.vy += 0.13;
         r.trail.push({ x: r.x, y: r.y });
-        if (r.trail.length > 8) r.trail.shift();
+        if (r.trail.length > 10) r.trail.shift();
         r.trail.forEach((t, ti) => {
-          ctx.globalAlpha = (ti + 1) / r.trail.length * 0.6;
+          ctx.globalAlpha = ((ti + 1) / r.trail.length) * 0.65;
           ctx.fillStyle = r.color;
           ctx.beginPath();
-          ctx.arc(t.x, t.y, 2, 0, Math.PI * 2);
+          ctx.arc(t.x, t.y, 2.2, 0, Math.PI * 2);
           ctx.fill();
         });
         ctx.globalAlpha = 1;
         ctx.fillStyle = r.color;
         ctx.beginPath();
-        ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+        ctx.arc(r.x, r.y, 3.2, 0, Math.PI * 2);
         ctx.fill();
-        if (r.vy >= -1.5 || r.y < H * rand(0.15, 0.4)) {
+        if (r.vy >= -1.2 || r.y < H * 0.28) {
           explode(r.x, r.y, r.color);
           rockets.splice(i, 1);
         }
@@ -158,7 +191,7 @@
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.04;
+        p.vy += 0.045;
         p.vx *= 0.99;
         p.life -= p.decay;
         if (p.life <= 0) {
@@ -175,7 +208,10 @@
       raf = requestAnimationFrame(frame);
     }
 
+    let closed = false;
     function cleanup() {
+      if (closed) return;
+      closed = true;
       running = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
@@ -187,15 +223,18 @@
 
     resize();
     window.addEventListener("resize", resize);
-    // Prime a dark field + first volley
     ctx.fillStyle = "#140818";
     ctx.fillRect(0, 0, W, H);
-    for (let i = 0; i < 4; i++) spawnRocket();
+    for (let i = 0; i < 5; i++) spawnRocket();
     raf = requestAnimationFrame(frame);
 
-    host.querySelector("#cpa-continue").addEventListener("click", cleanup);
+    const btn = host.querySelector("#cpa-continue");
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      cleanup();
+    });
   }
 
   global.CL = global.CL || {};
-  global.CL.celebration = { show, hasSeen, markSeen };
+  global.CL.celebration = { show, hasSeen, shouldShow, markSeen };
 })(window);
