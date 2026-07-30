@@ -156,41 +156,69 @@
   }
 
   function init() {
-    if (!location.hash || location.hash === "#") {
-      location.replace("#home");
+    // Do not route or show home until the full-screen celebration is dismissed
+    let appReady = false;
+
+    function unlockShell() {
+      document.documentElement.classList.remove("cpa-celebrate-active");
+      document.body.classList.remove("cpa-celebrate-active");
+      document.body.style.top = "";
+      const app = document.getElementById("app");
+      if (app) {
+        app.removeAttribute("aria-hidden");
+        app.removeAttribute("inert");
+      }
     }
 
-    window.addEventListener("hashchange", route);
-    document.getElementById("btn-home")?.addEventListener("click", () => {
+    window.addEventListener("hashchange", () => {
+      if (!appReady) return;
+      route();
+    });
+
+    document.getElementById("btn-home")?.addEventListener("click", (e) => {
+      if (!appReady) {
+        e.preventDefault();
+        return;
+      }
       location.hash = "#home";
     });
 
     document.querySelectorAll(".nav-item").forEach((el) => {
-      el.addEventListener("click", () => {
+      el.addEventListener("click", (e) => {
+        if (!appReady) {
+          e.preventDefault();
+          return;
+        }
         sessionStorage.setItem("cl_seen_home", "1");
       });
     });
 
-    refreshHeader();
-
     function bootApp() {
+      appReady = true;
+      unlockShell();
+      if (!location.hash || location.hash === "#") {
+        location.replace("#home");
+      }
+      refreshHeader();
       route();
-      // Prefetch today's CFB briefing in background
       if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
         CL.cfb.getDailyEdition({ force: false }).catch(() => {});
       }
     }
 
-    // Full-screen pink & green fireworks every app open (new session) and daily
+    // FIRST SCREEN: full-screen fireworks modal. App shell stays hidden until Continue.
+    const main = document.getElementById("main");
+    if (main) main.innerHTML = "";
+
     try {
-      if (
-        CL.celebration &&
-        typeof CL.celebration.show === "function" &&
-        typeof CL.celebration.shouldShow === "function" &&
-        CL.celebration.shouldShow()
-      ) {
+      if (CL.celebration && typeof CL.celebration.show === "function") {
         CL.celebration.show(() => {
-          location.replace("#home");
+          // Continue pressed → reveal app + home only now
+          if (!location.hash || location.hash === "#") {
+            location.replace("#home");
+          } else {
+            location.replace("#home");
+          }
           bootApp();
         });
       } else {
@@ -203,6 +231,7 @@
 
     let syncRefreshTimer = null;
     window.addEventListener("cl-sync-update", (e) => {
+      if (!appReady) return;
       const k = e.detail && e.detail.key;
       if (!k) return;
       clearTimeout(syncRefreshTimer);

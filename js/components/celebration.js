@@ -1,93 +1,57 @@
-/* Daily CPA celebration — pink & green fireworks for Lauren Wax */
+/* Full-screen CPA celebration modal — first screen on app open.
+   Covers the viewport completely; main app is hidden until Continue. */
 (function (global) {
-  const DAY_KEY = "cpaCelebrateDay";
-  const SESSION_KEY = "cl_cpa_celebrate_session";
+  let active = false;
+  let closed = false;
 
-  function todayKey() {
-    const d = new Date();
-    return (
-      d.getFullYear() +
-      "-" +
-      String(d.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(d.getDate()).padStart(2, "0")
-    );
-  }
+  function lockBody() {
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.classList.add("cpa-celebrate-active");
+    document.body.classList.add("cpa-celebrate-active");
+    document.body.style.top = "-" + scrollY + "px";
+    document.body.dataset.cpaScrollY = String(scrollY);
 
-  /**
-   * Show on every new app open (browser session), and at least once per calendar day.
-   * sessionStorage → again after tab/app is fully closed and reopened.
-   * localStorage day key → also forces once per day even if session lingered overnight.
-   */
-  function shouldShow() {
-    try {
-      const day = todayKey();
-      const lastDay = CL.storage.get(DAY_KEY, "");
-      if (lastDay !== day) return true;
-      // Same day: still show once per fresh session (app reopen)
-      if (!sessionStorage.getItem(SESSION_KEY)) return true;
-      return false;
-    } catch {
-      return true;
+    const app = document.getElementById("app");
+    if (app) {
+      app.setAttribute("aria-hidden", "true");
+      app.setAttribute("inert", "");
     }
   }
 
-  function hasSeen() {
-    return !shouldShow();
-  }
-
-  function markSeen() {
+  function unlockBody() {
+    const scrollY = Number(document.body.dataset.cpaScrollY || 0);
+    document.documentElement.classList.remove("cpa-celebrate-active");
+    document.body.classList.remove("cpa-celebrate-active");
+    document.body.style.top = "";
+    delete document.body.dataset.cpaScrollY;
     try {
-      CL.storage.set(DAY_KEY, todayKey(), { skipSync: true });
-      sessionStorage.setItem(SESSION_KEY, "1");
+      window.scrollTo(0, scrollY);
     } catch (_) {}
+
+    const app = document.getElementById("app");
+    if (app) {
+      app.removeAttribute("aria-hidden");
+      app.removeAttribute("inert");
+    }
   }
 
-  function show(onDone) {
-    if (!shouldShow()) {
-      if (typeof onDone === "function") onDone();
-      return;
-    }
-
-    // Avoid stacking if called twice
-    if (document.querySelector(".cpa-celebrate")) {
-      if (typeof onDone === "function") onDone();
-      return;
-    }
-
-    const host = document.createElement("div");
-    host.className = "cpa-celebrate";
-    host.setAttribute("role", "dialog");
-    host.setAttribute("aria-modal", "true");
-    host.setAttribute("aria-label", "Congratulations to Lauren Wax");
-    host.innerHTML = `
-      <canvas class="cpa-fw-canvas" aria-hidden="true"></canvas>
-      <div class="cpa-celebrate-inner">
-        <div class="cpa-celebrate-badge" aria-hidden="true">🎉 💚 💖 🎉</div>
-        <h1 class="cpa-celebrate-title">Congratulations to Lauren Wax, worlds hottest CPA</h1>
-        <button type="button" class="btn btn-primary btn-block cpa-celebrate-btn" id="cpa-continue">
-          Continue
-        </button>
-      </div>
-    `;
-    document.body.appendChild(host);
-    document.body.classList.add("cpa-celebrate-lock");
-
-    const canvas = host.querySelector(".cpa-fw-canvas");
+  function startFireworks(canvas) {
     const ctx = canvas.getContext("2d");
+    if (!ctx) return { stop: function () {} };
+
     let W = 0;
     let H = 0;
     let raf = 0;
     let running = true;
     const rockets = [];
     const particles = [];
-    const PINKS = ["#ff4da6", "#ff69b4", "#ff1493", "#ff9ec8", "#f48fb1", "#ec407a"];
-    const GREENS = ["#00c853", "#69f0ae", "#1de9b6", "#00e676", "#76ff03", "#a5d6a7"];
+    const PINKS = ["#ff4da6", "#ff69b4", "#ff1493", "#ff9ec8", "#f48fb1", "#ec407a", "#ff80ab"];
+    const GREENS = ["#00c853", "#69f0ae", "#1de9b6", "#00e676", "#76ff03", "#a5d6a7", "#b9f6ca"];
 
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const cssW = window.innerWidth;
-      const cssH = window.innerHeight;
+      const cssW = Math.max(window.innerWidth, document.documentElement.clientWidth || 0);
+      const cssH = Math.max(window.innerHeight, document.documentElement.clientHeight || 0);
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(cssH * dpr);
       canvas.style.width = cssW + "px";
@@ -109,19 +73,19 @@
     function spawnRocket() {
       rockets.push({
         x: rand(W * 0.08, W * 0.92),
-        y: H + 10,
-        vx: rand(-0.9, 0.9),
-        vy: rand(-12, -8),
+        y: H + 12,
+        vx: rand(-1, 1),
+        vy: rand(-13, -8.5),
         color: pickColor(),
         trail: []
       });
     }
 
     function explode(x, y, color) {
-      const n = 52 + ((Math.random() * 40) | 0);
+      const n = 56 + ((Math.random() * 40) | 0);
       for (let i = 0; i < n; i++) {
         const angle = (Math.PI * 2 * i) / n + rand(-0.12, 0.12);
-        const speed = rand(1.6, 7);
+        const speed = rand(1.8, 7.2);
         particles.push({
           x,
           y,
@@ -129,13 +93,13 @@
           vy: Math.sin(angle) * speed,
           life: 1,
           decay: rand(0.012, 0.028),
-          color: Math.random() < 0.35 ? pickColor() : color,
-          size: rand(1.6, 3.4)
+          color: Math.random() < 0.4 ? pickColor() : color,
+          size: rand(1.8, 3.6)
         });
       }
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 22; i++) {
         const angle = rand(0, Math.PI * 2);
-        const speed = rand(0.5, 2.4);
+        const speed = rand(0.4, 2.5);
         particles.push({
           x,
           y,
@@ -152,14 +116,14 @@
     let spawnTimer = 0;
     function frame() {
       if (!running) return;
-      ctx.fillStyle = "rgba(20, 8, 24, 0.2)";
+      ctx.fillStyle = "rgba(20, 8, 24, 0.18)";
       ctx.fillRect(0, 0, W, H);
 
       spawnTimer--;
-      if (spawnTimer <= 0 && rockets.length < 7) {
+      if (spawnTimer <= 0 && rockets.length < 8) {
         spawnRocket();
-        if (Math.random() < 0.6) spawnRocket();
-        spawnTimer = 10 + ((Math.random() * 16) | 0);
+        if (Math.random() < 0.65) spawnRocket();
+        spawnTimer = 8 + ((Math.random() * 14) | 0);
       }
 
       for (let i = rockets.length - 1; i >= 0; i--) {
@@ -170,18 +134,18 @@
         r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
         r.trail.forEach((t, ti) => {
-          ctx.globalAlpha = ((ti + 1) / r.trail.length) * 0.65;
+          ctx.globalAlpha = ((ti + 1) / r.trail.length) * 0.7;
           ctx.fillStyle = r.color;
           ctx.beginPath();
-          ctx.arc(t.x, t.y, 2.2, 0, Math.PI * 2);
+          ctx.arc(t.x, t.y, 2.4, 0, Math.PI * 2);
           ctx.fill();
         });
         ctx.globalAlpha = 1;
         ctx.fillStyle = r.color;
         ctx.beginPath();
-        ctx.arc(r.x, r.y, 3.2, 0, Math.PI * 2);
+        ctx.arc(r.x, r.y, 3.4, 0, Math.PI * 2);
         ctx.fill();
-        if (r.vy >= -1.2 || r.y < H * 0.28) {
+        if (r.vy >= -1 || r.y < H * 0.26) {
           explode(r.x, r.y, r.color);
           rockets.splice(i, 1);
         }
@@ -208,33 +172,119 @@
       raf = requestAnimationFrame(frame);
     }
 
-    let closed = false;
-    function cleanup() {
-      if (closed) return;
-      closed = true;
-      running = false;
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-      document.body.classList.remove("cpa-celebrate-lock");
-      if (host.parentNode) host.parentNode.removeChild(host);
-      markSeen();
-      if (typeof onDone === "function") onDone();
-    }
-
     resize();
     window.addEventListener("resize", resize);
     ctx.fillStyle = "#140818";
     ctx.fillRect(0, 0, W, H);
-    for (let i = 0; i < 5; i++) spawnRocket();
+    for (let i = 0; i < 6; i++) spawnRocket();
     raf = requestAnimationFrame(frame);
 
+    return {
+      stop: function () {
+        running = false;
+        cancelAnimationFrame(raf);
+        window.removeEventListener("resize", resize);
+      }
+    };
+  }
+
+  /**
+   * Activate the full-screen celebration (uses markup in index.html when present).
+   * Main app stays hidden until Continue.
+   */
+  function show(onDone) {
+    if (active) return;
+    active = true;
+    closed = false;
+
+    lockBody();
+
+    let host = document.getElementById("cpa-celebrate");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "cpa-celebrate";
+      host.className = "cpa-celebrate";
+      host.setAttribute("role", "dialog");
+      host.setAttribute("aria-modal", "true");
+      host.setAttribute("aria-labelledby", "cpa-celebrate-title");
+      host.innerHTML = `
+        <canvas class="cpa-fw-canvas" aria-hidden="true"></canvas>
+        <div class="cpa-celebrate-inner">
+          <div class="cpa-celebrate-badge" aria-hidden="true">🎉 💚 💖 🎉</div>
+          <h1 class="cpa-celebrate-title" id="cpa-celebrate-title">
+            Congratulations to Lauren Wax, worlds hottest CPA
+          </h1>
+          <button type="button" class="btn btn-primary btn-block cpa-celebrate-btn" id="cpa-continue">
+            Continue
+          </button>
+        </div>
+      `;
+      document.body.appendChild(host);
+    } else {
+      host.hidden = false;
+      host.style.display = "";
+      host.classList.add("cpa-celebrate");
+      // Ensure it is a direct child of body (above everything)
+      if (host.parentNode !== document.body) {
+        document.body.appendChild(host);
+      } else {
+        document.body.appendChild(host); // move to end for top paint order
+      }
+    }
+
+    const canvas = host.querySelector(".cpa-fw-canvas");
+    const fw = canvas ? startFireworks(canvas) : { stop: function () {} };
+
+    function cleanup() {
+      if (closed) return;
+      closed = true;
+      fw.stop();
+      if (host && host.parentNode) host.parentNode.removeChild(host);
+      unlockBody();
+      active = false;
+      if (typeof onDone === "function") onDone();
+    }
+
     const btn = host.querySelector("#cpa-continue");
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      cleanup();
+    if (btn) {
+      try {
+        btn.focus({ preventScroll: true });
+      } catch (_) {}
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cleanup();
+      });
+    }
+
+    host.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        if (btn) btn.focus();
+      }
     });
+
+    host.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!e.target.closest(".cpa-celebrate-inner")) e.preventDefault();
+      },
+      { passive: false }
+    );
+  }
+
+  function shouldShow() {
+    return true;
+  }
+
+  function hasSeen() {
+    return false;
   }
 
   global.CL = global.CL || {};
-  global.CL.celebration = { show, hasSeen, shouldShow, markSeen };
+  global.CL.celebration = { show, hasSeen, shouldShow, isActive: () => active };
 })(window);

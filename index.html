@@ -23,8 +23,28 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
 </head>
-<body>
-  <div id="app">
+<body class="cpa-celebrate-active">
+  <!-- Full-screen modal first — not part of home scroll; #app hidden until Continue -->
+  <div
+    id="cpa-celebrate"
+    class="cpa-celebrate"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cpa-celebrate-title"
+  >
+    <canvas class="cpa-fw-canvas" aria-hidden="true"></canvas>
+    <div class="cpa-celebrate-inner">
+      <div class="cpa-celebrate-badge" aria-hidden="true">🎉 💚 💖 🎉</div>
+      <h1 class="cpa-celebrate-title" id="cpa-celebrate-title">
+        Congratulations to Lauren Wax, worlds hottest CPA
+      </h1>
+      <button type="button" class="btn btn-primary btn-block cpa-celebrate-btn" id="cpa-continue">
+        Continue
+      </button>
+    </div>
+  </div>
+
+  <div id="app" aria-hidden="true" inert>
     <header class="app-header">
       <a href="#home" class="brand" style="text-decoration:none;color:inherit">
         <div class="brand-mark has-photo" id="header-avatar" aria-hidden="true">
