@@ -333,12 +333,25 @@
     return roundLoad(max * pct);
   }
 
+  /** Epley estimated 1RM from weight × reps completed */
+  function e1rm(weight, reps) {
+    const w = Number(weight);
+    const r = Math.max(1, Number(reps) || 1);
+    if (!w || w <= 0 || Number.isNaN(w)) return 0;
+    if (r === 1) return w;
+    return w * (1 + r / 30);
+  }
+
   /** Sunday-start week key YYYY-MM-DD of that Sunday */
   function weekKey(date) {
     date = date || new Date();
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const day = d.getDay(); // 0 Sun
     d.setDate(d.getDate() - day);
+    return formatWeekDate(d);
+  }
+
+  function formatWeekDate(d) {
     return (
       d.getFullYear() +
       "-" +
@@ -348,19 +361,290 @@
     );
   }
 
+  function parseWeekKey(key) {
+    const parts = String(key || "").split("-").map(Number);
+    if (parts.length < 3 || !parts[0]) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  /** Previous Sunday week key */
+  function previousWeekKey(key) {
+    const d = parseWeekKey(key) || parseWeekKey(weekKey());
+    if (!d) return null;
+    d.setDate(d.getDate() - 7);
+    return formatWeekDate(d);
+  }
+
   function weekSeedFromKey(key) {
     // Use week-of-year style progression from the Sunday date, not a hash —
     // so consecutive weeks actually progress A→B→C→D
-    const parts = String(key || "").split("-").map(Number);
-    if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) {
-      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const d = parseWeekKey(key);
+    if (d) {
       const start = new Date(d.getFullYear(), 0, 0);
       const dayNum = Math.floor((d - start) / (24 * 60 * 60 * 1000));
       return Math.floor(dayNum / 7);
     }
     let h = 0;
-    for (let i = 0; i < key.length; i++) h = (Math.imul(31, h) + key.charCodeAt(i)) | 0;
+    const s = String(key || "");
+    for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
     return Math.abs(h);
+  }
+
+  /**
+   * Parse a logged set value into { weight, reps, coward }.
+   * Supports objects, "225", "225 x 5", and "I'm a Coward".
+   */
+  function parseLogEntry(val, prescribedReps) {
+    const fallbackReps = Number(prescribedReps) || 0;
+    if (val == null || val === "") return null;
+    if (typeof val === "object") {
+      if (val.coward) return { weight: 0, reps: 0, coward: true };
+      const w = Number(val.weight);
+      const r = val.reps != null ? Number(val.reps) : fallbackReps;
+      if (Number.isNaN(w) || w <= 0) return { weight: 0, reps: 0, coward: true };
+      return { weight: w, reps: Number.isNaN(r) ? fallbackReps : r, coward: false };
+    }
+    const s = String(val).trim();
+    if (!s || /coward/i.test(s)) return { weight: 0, reps: 0, coward: true };
+    const multi = s.match(/^([\d.]+)\s*[xX×*]\s*(\d+)/);
+    if (multi) {
+      return { weight: Number(multi[1]), reps: Number(multi[2]), coward: false };
+    }
+    const n = Number(s.replace(/lb/i, "").trim());
+    if (!Number.isNaN(n) && n > 0) {
+      return { weight: n, reps: fallbackReps, coward: false };
+    }
+    return null;
+  }
+
+  /** Expand program sets into loggable rows (same keys as UI). */
+  function expandProgramRows(blockSets) {
+    const rows = [];
+    (blockSets || []).forEach((s, bi) => {
+      if (s.free) {
+        for (let i = 1; i <= (s.sets || 1); i++) {
+          rows.push({
+            key: "free_" + bi + "_" + i,
+            free: true,
+            liftId: null,
+            reps: s.reps,
+            pct: null,
+            label: s.name || "",
+            isWorking: false
+          });
+        }
+      } else {
+        const n = s.sets || 1;
+        const label = String(s.label || "");
+        const isWorking = /work/i.test(label) || (s.pct != null && s.pct >= 0.62);
+        for (let i = 1; i <= n; i++) {
+          rows.push({
+            key: (s.liftId || "x") + "_" + bi + "_" + i,
+            free: false,
+            liftId: s.liftId,
+            reps: s.reps,
+            pct: s.pct,
+            label,
+            isWorking
+          });
+        }
+      }
+    });
+    return rows;
+  }
+
+  /**
+   * Pull performance samples for main lifts from a completed week.
+   * Uses actual logged weight/reps vs prescribed targets.
+   */
+  function collectLiftSamples(weekProg, program, maxes) {
+    const byLift = {};
+    LIFTS.forEach((l) => {
+      byLift[l.id] = [];
+    });
+    if (!weekProg || !program) return byLift;
+
+    program.forEach((workout, wi) => {
+      const logs = (weekProg.logs && weekProg.logs[wi]) || {};
+      (workout.blocks || []).forEach((block) => {
+        expandProgramRows(block.sets).forEach((row) => {
+          if (row.free || !row.liftId || !byLift[row.liftId]) return;
+          const prescribed =
+            typeof row.reps === "number" ? row.reps : parseInt(String(row.reps), 10) || 5;
+          const entry = parseLogEntry(logs[row.key], prescribed);
+          if (!entry || entry.coward) return;
+          const target = calcTarget(maxes, row.liftId, row.pct);
+          byLift[row.liftId].push({
+            weight: entry.weight,
+            reps: entry.reps || prescribed,
+            prescribedReps: prescribed,
+            target: target || entry.weight,
+            pct: row.pct,
+            isWorking: !!row.isWorking,
+            e1rm: e1rm(entry.weight, entry.reps || prescribed)
+          });
+        });
+      });
+    });
+    return byLift;
+  }
+
+  /**
+   * Smart TM decision from demonstrated performance — not linear weekly bumps.
+   * Higher reps at a given weight ⇒ capacity for more load at lower/same reps next week.
+   * Struggle ⇒ hold or tiny bump only.
+   */
+  function decideMaxFromSamples(currentMax, samples) {
+    const cur = Number(currentMax) || 0;
+    const working = (samples || []).filter((s) => s.isWorking);
+    const pool = working.length ? working : samples || [];
+
+    if (!pool.length) {
+      return { max: cur || "", changed: false, reason: "no logged sets" };
+    }
+
+    let bestE1 = 0;
+    let repDeltaSum = 0;
+    let hit = 0;
+    let under = 0;
+    let weightOverSum = 0;
+
+    pool.forEach((s) => {
+      if (s.e1rm > bestE1) bestE1 = s.e1rm;
+      const pd = (s.reps || 0) - (s.prescribedReps || 0);
+      repDeltaSum += pd;
+      const tgt = s.target || s.weight;
+      if (s.weight >= tgt * 0.95 && s.reps >= (s.prescribedReps || 0)) hit++;
+      else if (s.weight < tgt * 0.9 || s.reps < (s.prescribedReps || 0) - 0.5) under++;
+      if (tgt > 0) weightOverSum += s.weight / tgt - 1;
+    });
+
+    const n = pool.length;
+    const avgRepDelta = repDeltaSum / n;
+    const hitRatio = hit / n;
+    const underRatio = under / n;
+    const avgWeightRatio = 1 + weightOverSum / n;
+
+    // Implied training max ≈ 90% of best e1RM (sustainable programming)
+    const impliedTm = bestE1 > 0 ? roundLoad(bestE1 * 0.9) : 0;
+
+    let newMax = cur;
+    let reason = "held";
+
+    if (underRatio >= 0.5) {
+      // Struggled — keep intensity, no ego jump
+      newMax = cur;
+      reason = "held · last week was hard";
+    } else if (avgRepDelta >= 1.5 && hitRatio >= 0.5) {
+      // Extra reps at weight ⇒ convert to heavier loads next week
+      // ~2–3 lb per extra rep on average, capped
+      const repBump = Math.min(cur * 0.04, Math.max(2.5, avgRepDelta * 2.5));
+      const fromReps = roundLoad(cur + repBump);
+      newMax = fromReps;
+      if (impliedTm > newMax) {
+        newMax = Math.min(impliedTm, roundLoad(cur * 1.05));
+      }
+      reason = "up · high reps at weight → heavier next week";
+    } else if (avgWeightRatio >= 1.03 && hitRatio >= 0.6) {
+      // Used more load than prescribed and completed reps
+      newMax = roundLoad(Math.max(cur + 2.5, Math.min(impliedTm || cur + 5, cur * 1.04)));
+      reason = "up · beat prescribed loads";
+    } else if (hitRatio >= 0.75) {
+      // Clean hits — modest ability-based bump
+      if (impliedTm > cur) {
+        newMax = roundLoad(Math.min(impliedTm, cur * 1.035 + 2.5));
+      } else {
+        newMax = roundLoad(cur + 2.5);
+      }
+      reason = "up · targets hit cleanly";
+    } else if (hitRatio >= 0.4) {
+      newMax = cur ? roundLoad(cur + 2.5) : impliedTm || "";
+      reason = "small bump · mixed week";
+    } else {
+      newMax = cur;
+      reason = "held · light or incomplete data";
+    }
+
+    // Never decrease from struggle path; cap weekly gain at 5%
+    if (cur && newMax && newMax < cur) newMax = cur;
+    if (cur && newMax && newMax > cur * 1.05) newMax = roundLoad(cur * 1.05);
+    // If no prior max but we have e1RM, seed TM from ability
+    if (!cur && impliedTm) {
+      newMax = impliedTm;
+      reason = "set from logged ability";
+    }
+
+    const changed = Number(newMax) !== Number(cur) && newMax !== "" && newMax != null;
+    return {
+      max: newMax === "" || newMax == null ? cur || "" : newMax,
+      changed: !!changed,
+      reason,
+      bestE1rm: bestE1 ? roundLoad(bestE1) : 0,
+      avgRepDelta: Math.round(avgRepDelta * 10) / 10
+    };
+  }
+
+  /**
+   * Evaluate previous week logs and update training maxes for the new Sunday week.
+   * Idempotent per week via state.progressionAppliedFor.
+   */
+  function applySmartProgression(state, currentWeekKey) {
+    const key = currentWeekKey || weekKey();
+    if (!state || state.progressionAppliedFor === key) {
+      return { state, applied: false, notes: [] };
+    }
+
+    const prevKey = previousWeekKey(key);
+    const prevProg = state.weeks && prevKey ? state.weeks[prevKey] : null;
+    const anyDone = prevProg && (prevProg.completed || []).some(Boolean);
+
+    if (!prevKey || !prevProg || !anyDone) {
+      state.progressionAppliedFor = key;
+      return { state, applied: false, notes: [] };
+    }
+
+    const prevSeed = weekSeedFromKey(prevKey);
+    const program = weekProgram(prevSeed);
+    const samplesByLift = collectLiftSamples(prevProg, program, state.maxes || {});
+    const notes = [];
+    const nextMaxes = Object.assign({}, state.maxes || {});
+
+    LIFTS.forEach((lift) => {
+      const samples = samplesByLift[lift.id] || [];
+      if (!samples.length) return;
+      const decision = decideMaxFromSamples(nextMaxes[lift.id], samples);
+      if (decision.changed) {
+        nextMaxes[lift.id] = decision.max;
+        notes.push({
+          liftId: lift.id,
+          label: lift.label,
+          from: state.maxes[lift.id],
+          to: decision.max,
+          reason: decision.reason,
+          bestE1rm: decision.bestE1rm
+        });
+      } else if (samples.some((s) => s.isWorking)) {
+        notes.push({
+          liftId: lift.id,
+          label: lift.label,
+          from: state.maxes[lift.id],
+          to: decision.max,
+          reason: decision.reason,
+          bestE1rm: decision.bestE1rm,
+          held: true
+        });
+      }
+    });
+
+    state.maxes = nextMaxes;
+    state.progressionAppliedFor = key;
+    state.lastProgression = {
+      weekKey: key,
+      fromWeek: prevKey,
+      notes,
+      at: Date.now()
+    };
+    return { state, applied: true, notes };
   }
 
   global.CL = global.CL || {};
@@ -372,7 +656,14 @@
     waveScheme,
     roundLoad,
     calcTarget,
+    e1rm,
     weekKey,
-    weekSeedFromKey
+    weekSeedFromKey,
+    previousWeekKey,
+    parseLogEntry,
+    expandProgramRows,
+    collectLiftSamples,
+    decideMaxFromSamples,
+    applySmartProgression
   };
 })(window);

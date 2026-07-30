@@ -14,6 +14,8 @@
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
     workout: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
     workouts: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
+    cpa: { title: "CPA Rankings", nav: "more", render: () => CL.sections.cpa.render },
+    rankings: { title: "CPA Rankings", nav: "more", render: () => CL.sections.cpa.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -91,6 +93,12 @@
             <p>Maxes · weekly strength</p>
             <span class="badge">Open</span>
           </button>
+          <button type="button" class="more-card" data-go="cpa">
+            <span class="emoji">🥇</span>
+            <strong>CPA Rankings</strong>
+            <p>Best looking · smartest</p>
+            <span class="badge">#1</span>
+          </button>
           <button type="button" class="more-card" data-go="games">
             <span class="emoji">🎮</span>
             <strong>Games</strong>
@@ -164,11 +172,23 @@
     });
 
     refreshHeader();
-    route();
 
-    // Prefetch today's CFB briefing in background
-    if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
-      CL.cfb.getDailyEdition({ force: false }).catch(() => {});
+    function bootApp() {
+      route();
+      // Prefetch today's CFB briefing in background
+      if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
+        CL.cfb.getDailyEdition({ force: false }).catch(() => {});
+      }
+    }
+
+    // Full-screen pink & green CPA fireworks once (first open only)
+    if (CL.celebration && !CL.celebration.hasSeen()) {
+      CL.celebration.show(() => {
+        location.replace("#home");
+        bootApp();
+      });
+    } else {
+      bootApp();
     }
 
     let syncRefreshTimer = null;

@@ -13,7 +13,8 @@ Mobile-friendly web app: home, CFB, movies, games, notes, books, workouts.
 | **Movies** | Watched / ranked wishlist (drag to reorder) · decimal ratings |
 | **Games** | Golf, Darts, Spades, Gin · +/− scores · permanent history (syncs) |
 | **Notes** | Shared rich-text notes (syncs) |
-| **⛏️⛏️** | Strength maxes · 4 weekly % workouts · history (syncs) |
+| **⛏️⛏️** | Strength maxes · smart weekly progression from real logs · history (syncs) |
+| **CPA Rankings** | Best looking / Smartest · Lauren Wax always #1 🥇 |
 | **Books** | Shelves · reviews (syncs) |
 | **Profile** | Couple Group Firebase sync |
 | **Day counter** | Days since Apr 11, 2026 · `Xd · MY DZ` (30-day months) |

@@ -1,4 +1,4 @@
-/* Workout · ⛏️⛏️ — gated entry, maxes, weekly % program, history (sync key: workouts) */
+/* Workout · ⛏️⛏️ — gated entry, maxes, smart weekly progression, history (sync key: workouts) */
 (function (global) {
   const STORAGE = "workouts";
   const COWARD = "I'm a Coward";
@@ -12,10 +12,11 @@
         bench: "",
         powerClean: ""
       },
-      // progress keyed by weekKey
       weeks: {},
       history: [],
-      gatePassed: false
+      gatePassed: false,
+      progressionAppliedFor: null,
+      lastProgression: null
     };
   }
 
@@ -31,8 +32,11 @@
     const w = (state.weeks && state.weeks[key]) || {
       activeIndex: 0,
       completed: [false, false, false, false],
-      logs: [{}, {}, {}, {}] // per-workout set logs
+      logs: [{}, {}, {}, {}]
     };
+    if (!Array.isArray(w.logs)) w.logs = [{}, {}, {}, {}];
+    while (w.logs.length < 4) w.logs.push({});
+    if (!Array.isArray(w.completed)) w.completed = [false, false, false, false];
     return w;
   }
 
@@ -43,7 +47,6 @@
   }
 
   function expandWorkingSets(blockSets) {
-    // Expand {sets:5, reps:5, pct} into individual loggable rows
     const rows = [];
     (blockSets || []).forEach((s, bi) => {
       if (s.free) {
@@ -80,6 +83,25 @@
     return rows;
   }
 
+  function prescribedRepsOf(row) {
+    if (typeof row.reps === "number") return row.reps;
+    const n = parseInt(String(row.reps || ""), 10);
+    return Number.isNaN(n) ? 0 : n;
+  }
+
+  /** Read weight/reps from log entry for form defaults */
+  function logFields(val, prescribedReps) {
+    const parsed = CL.workoutsApi.parseLogEntry(val, prescribedReps);
+    if (!parsed || parsed.coward) {
+      return { weight: "", reps: prescribedReps || "", coward: true };
+    }
+    return {
+      weight: parsed.weight != null ? String(parsed.weight) : "",
+      reps: parsed.reps != null ? String(parsed.reps) : String(prescribedReps || ""),
+      coward: false
+    };
+  }
+
   function showGate(onPass) {
     const root = document.getElementById("modal-root");
     if (!root) {
@@ -106,9 +128,19 @@
     });
   }
 
+  /** Sunday week rollover: evaluate last week’s real weights/reps → smart maxes */
+  function ensureSmartProgression(state) {
+    if (!CL.workoutsApi.applySmartProgression) return state;
+    const key = CL.workoutsApi.weekKey();
+    if (state.progressionAppliedFor === key) return state;
+    const result = CL.workoutsApi.applySmartProgression(state, key);
+    setState(result.state);
+    return result.state;
+  }
+
   function render(root) {
     let view = "active"; // active | maxes | history
-    let browseIndex = null; // when scrolling workouts
+    let browseIndex = null;
     let unlocked = false;
 
     function start() {
@@ -116,18 +148,16 @@
       paint();
     }
 
-    // Full-screen gate every time the section is opened
     root.innerHTML = `<section class="page"><div class="empty"><p>…</p></div></section>`;
     showGate(start);
 
     function paint() {
       if (!unlocked) return;
-      const state = getState();
+      let state = ensureSmartProgression(getState());
       const key = CL.workoutsApi.weekKey();
       const seed = CL.workoutsApi.weekSeedFromKey(key);
       const program = CL.workoutsApi.weekProgram(seed);
       const prog = weekProgress(state, key);
-      // Advance activeIndex to first incomplete
       let active = prog.activeIndex || 0;
       while (active < 4 && prog.completed[active]) active++;
       if (active > 3) active = 3;
@@ -172,17 +202,53 @@
       if (view === "maxes") bindMaxes(root, state, paint);
       else if (view === "history") {
         /* read-only */
-      } else bindWorkout(root, state, key, program, prog, browseIndex, paint, () => {
-        browseIndex = null;
-      });
+      } else
+        bindWorkout(root, state, key, program, prog, browseIndex, paint, () => {
+          browseIndex = null;
+        });
+    }
+
+    function progressionBannerHtml(state) {
+      const lp = state.lastProgression;
+      if (!lp || lp.weekKey !== CL.workoutsApi.weekKey()) return "";
+      const notes = lp.notes || [];
+      if (!notes.length) {
+        return `
+          <div class="card wo-progress-banner">
+            <div class="card-title">This week’s targets</div>
+            <p class="card-meta">Based on last week’s logs — no linear auto-jumps. Performance looked steady, so intensity is held or barely nudged.</p>
+          </div>`;
+      }
+      const lines = notes
+        .map((n) => {
+          const arrow =
+            n.held || Number(n.to) === Number(n.from)
+              ? `${n.from || "—"} lb · ${n.reason}`
+              : `${n.from || "—"} → <strong>${n.to}</strong> lb · ${n.reason}`;
+          return `<div class="wo-progress-line"><span>${CL.escapeHtml(n.label)}</span><span>${arrow}</span></div>`;
+        })
+        .join("");
+      return `
+        <div class="card wo-progress-banner">
+          <div class="card-title">Smart progression · from last week</div>
+          <p class="card-meta" style="margin-bottom:8px">
+            New week targets use what you actually lifted and rep’d — not a flat weekly increase.
+          </p>
+          <div class="wo-progress-lines">${lines}</div>
+        </div>`;
     }
 
     function maxesHtml(state) {
       const lifts = CL.workoutsApi.LIFTS;
       return `
+        ${progressionBannerHtml(state)}
         <div class="card">
           <div class="card-title">Training maxes (lb)</div>
-          <p class="card-meta" style="margin-bottom:12px">Used for % work. Update anytime. Syncs with Couple Group.</p>
+          <p class="card-meta" style="margin-bottom:12px">
+            Used for % work. Every Sunday, maxes update from last week’s logged weights &amp; reps
+            (extra reps at a weight → heavier next week; struggle → hold or tiny bump).
+            You can still override anytime. Syncs with Couple Group.
+          </p>
           <div class="form-stack">
             ${lifts
               .map(
@@ -252,7 +318,8 @@
 
     function workoutHtml(state, key, program, prog, idx, activeIdx, workout, isActive, isDone, logs) {
       return `
-        <p class="card-meta" style="margin-bottom:8px">Week of ${CL.escapeHtml(key)} · resets Sunday</p>
+        ${progressionBannerHtml(state)}
+        <p class="card-meta" style="margin-bottom:8px">Week of ${CL.escapeHtml(key)} · resets Sunday · smart progression from real logs</p>
         <div class="wo-week-tabs">
           ${program
             .map((w, i) => {
@@ -294,27 +361,40 @@
                       const liftName = row.free
                         ? row.name
                         : (CL.workoutsApi.LIFTS.find((l) => l.id === row.liftId) || {}).label || row.liftId;
+                      const presc = prescribedRepsOf(row);
                       const title = row.free
-                        ? `${liftName} · set ${row.setNum}/${row.setsTotal} · ${row.reps}`
+                        ? `${liftName} · set ${row.setNum}/${row.setsTotal} · target ${row.reps}`
                         : `${liftName} · set ${row.setNum}/${row.setsTotal} · ${row.reps} @ ${pctLabel}`;
-                      const val = logs[row.key] != null ? logs[row.key] : "";
+                      const fields = logFields(logs[row.key], presc || 0);
+                      const showReps = !row.free || presc > 0;
                       return `
                         <div class="wo-set-row" data-key="${CL.escapeHtml(row.key)}">
                           <div class="wo-set-info">
                             <div class="wo-set-title">${CL.escapeHtml(title)}</div>
                             ${
                               target != null
-                                ? `<div class="wo-set-target">Target ≈ <strong>${target}</strong> lb</div>`
+                                ? `<div class="wo-set-target">Target ≈ <strong>${target}</strong> lb × ${presc || row.reps}</div>`
                                 : row.note
                                   ? `<div class="card-meta">${CL.escapeHtml(row.note)}</div>`
                                   : ""
                             }
                           </div>
-                          <input type="text" class="wo-weight-input" data-key="${CL.escapeHtml(
-                            row.key
-                          )}" inputmode="decimal" placeholder="lb" value="${CL.escapeHtml(
-                            String(val)
-                          )}" ${isDone ? "readonly" : ""} />
+                          <div class="wo-log-inputs">
+                            <input type="text" class="wo-weight-input" data-key="${CL.escapeHtml(
+                              row.key
+                            )}" inputmode="decimal" placeholder="lb" value="${CL.escapeHtml(
+                              fields.weight
+                            )}" ${isDone ? "readonly" : ""} aria-label="Weight lb" />
+                            ${
+                              showReps
+                                ? `<input type="text" class="wo-reps-input" data-key="${CL.escapeHtml(
+                                    row.key
+                                  )}" inputmode="numeric" placeholder="reps" value="${CL.escapeHtml(
+                                    fields.weight ? fields.reps : presc ? String(presc) : ""
+                                  )}" ${isDone ? "readonly" : ""} aria-label="Reps completed" />`
+                                : ""
+                            }
+                          </div>
                         </div>`;
                     })
                     .join("")}
@@ -335,7 +415,7 @@
             isDone
               ? `<p class="filter-hint">Already completed this week. Browse other days or check History.</p>`
               : `<button type="button" class="btn btn-primary btn-block" id="wo-finish">Complete Workout</button>
-                 <p class="filter-hint" style="margin-top:8px">Blank weight fields log as “I'm a Coward”.</p>`
+                 <p class="filter-hint" style="margin-top:8px">Log actual weight + reps. Blank weight = “I'm a Coward”.</p>`
           }
         </article>
       `;
@@ -352,36 +432,48 @@
       root.querySelector("#wo-finish")?.addEventListener("click", () => {
         const workout = program[idx];
         const weights = {};
-        const labels = {};
+        const pretty = {};
         (workout.blocks || []).forEach((block) => {
           expandWorkingSets(block.sets).forEach((row) => {
-            const input = root.querySelector(`.wo-weight-input[data-key="${row.key}"]`);
-            let raw = input ? String(input.value).trim() : "";
-            if (!raw) raw = COWARD;
-            weights[row.key] = raw;
+            const wInput = root.querySelector(`.wo-weight-input[data-key="${row.key}"]`);
+            const rInput = root.querySelector(`.wo-reps-input[data-key="${row.key}"]`);
+            let rawW = wInput ? String(wInput.value).trim() : "";
+            const presc = prescribedRepsOf(row);
+            let rawR = rInput ? String(rInput.value).trim() : "";
             const liftName = row.free
               ? row.name
               : (CL.workoutsApi.LIFTS.find((l) => l.id === row.liftId) || {}).label || row.liftId;
-            labels[row.key] =
+            const label =
               liftName +
               " set " +
               row.setNum +
               (row.pct != null ? " @" + Math.round(row.pct * 100) + "%" : "");
+
+            if (!rawW) {
+              weights[row.key] = { weight: 0, reps: 0, coward: true };
+              pretty[label] = COWARD;
+            } else {
+              const w = Number(String(rawW).replace(/lb/i, "").trim());
+              let reps = rawR !== "" ? Number(rawR) : presc;
+              if (Number.isNaN(reps) || reps < 0) reps = presc || 0;
+              if (Number.isNaN(w) || w <= 0) {
+                weights[row.key] = { weight: 0, reps: 0, coward: true };
+                pretty[label] = COWARD;
+              } else {
+                weights[row.key] = { weight: w, reps: reps, coward: false };
+                pretty[label] = w + " × " + reps;
+              }
+            }
           });
         });
 
         prog.logs[idx] = weights;
         prog.completed[idx] = true;
-        // Advance to next incomplete
         let next = idx + 1;
         while (next < 4 && prog.completed[next]) next++;
         prog.activeIndex = next < 4 ? next : 4;
         saveWeekProgress(state, key, prog);
 
-        const pretty = {};
-        Object.keys(weights).forEach((k) => {
-          pretty[labels[k] || k] = weights[k];
-        });
         state.history = state.history || [];
         state.history.push({
           id: CL.uid("wo"),

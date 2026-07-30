@@ -106,6 +106,11 @@
                 <strong>⛏️⛏️</strong>
                 <span>Strength week</span>
               </a>
+              <a href="#cpa" class="quick-card">
+                <span class="emoji">🥇</span>
+                <strong>CPA Rankings</strong>
+                <span>Lauren #1</span>
+              </a>
               <a href="#profile" class="quick-card">
                 <span class="emoji">💕</span>
                 <strong>Profile</strong>
