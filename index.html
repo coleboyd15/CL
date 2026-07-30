@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="cpa-celebrate-active">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0A3161" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#140818" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CL" />
   <meta name="description" content="CL — couple's lifestyle app for CFB, movies, games, notes, workouts, and more." />
   <title>CL</title>
@@ -16,15 +17,41 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
   <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
   <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png" />
+  <!-- Critical: full-screen celebration styles first (mobile / PWA home screen) -->
+  <link rel="stylesheet" href="css/celebrate.css?v=4" />
+  <style>
+    /* Inline critical path — works even if external CSS is cached stale */
+    html.cpa-celebrate-active, html.cpa-celebrate-active body {
+      margin: 0 !important; padding: 0 !important;
+      background: #140818 !important; background-image: none !important;
+      overflow: hidden !important; height: 100% !important; width: 100% !important;
+      touch-action: none !important; overscroll-behavior: none !important;
+    }
+    html.cpa-celebrate-active body { position: fixed !important; inset: 0 !important; }
+    html.cpa-celebrate-active #app,
+    html.cpa-celebrate-active #toast-host,
+    html.cpa-celebrate-active #modal-root {
+      display: none !important; visibility: hidden !important; pointer-events: none !important;
+    }
+    #cpa-celebrate {
+      position: fixed !important; inset: 0 !important;
+      width: 100% !important; height: 100% !important;
+      min-height: 100vh !important; min-height: 100dvh !important;
+      min-height: -webkit-fill-available !important;
+      z-index: 2147483647 !important; background: #140818 !important;
+      display: flex !important; align-items: center !important; justify-content: center !important;
+      overflow: hidden !important;
+    }
+  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/base.css?v=4" />
+  <link rel="stylesheet" href="css/layout.css?v=4" />
+  <link rel="stylesheet" href="css/components.css?v=4" />
 </head>
 <body class="cpa-celebrate-active">
-  <!-- Full-screen modal first — not part of home scroll; #app hidden until Continue -->
+  <!-- FIRST SCREEN: full-viewport modal. App is hidden until Continue. -->
   <div
     id="cpa-celebrate"
     class="cpa-celebrate"
@@ -94,27 +121,27 @@
   <div class="toast-host" id="toast-host" aria-live="polite"></div>
   <div id="modal-root"></div>
 
-  <!-- Core -->
-  <script src="js/storage.js"></script>
-  <script src="js/profile.js"></script>
-  <script src="js/sync.js"></script>
-  <script src="js/daycount.js"></script>
-  <script src="js/data/movies.js"></script>
-  <script src="js/data/cfb.js"></script>
-  <script src="js/data/workouts.js"></script>
-  <script src="js/components/rating.js"></script>
-  <script src="js/components/modal.js"></script>
-  <script src="js/components/celebration.js"></script>
-  <script src="js/sections/home.js"></script>
-  <script src="js/sections/profile.js"></script>
-  <script src="js/sections/cfb.js"></script>
-  <script src="js/sections/movies.js"></script>
-  <script src="js/sections/fun.js"></script>
-  <script src="js/sections/games.js"></script>
-  <script src="js/sections/notes.js"></script>
-  <script src="js/sections/books.js"></script>
-  <script src="js/sections/workout.js"></script>
-  <script src="js/sections/cpa.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Celebration first (auto-starts), then app -->
+  <script src="js/components/celebration.js?v=4"></script>
+  <script src="js/storage.js?v=4"></script>
+  <script src="js/profile.js?v=4"></script>
+  <script src="js/sync.js?v=4"></script>
+  <script src="js/daycount.js?v=4"></script>
+  <script src="js/data/movies.js?v=4"></script>
+  <script src="js/data/cfb.js?v=4"></script>
+  <script src="js/data/workouts.js?v=4"></script>
+  <script src="js/components/rating.js?v=4"></script>
+  <script src="js/components/modal.js?v=4"></script>
+  <script src="js/sections/home.js?v=4"></script>
+  <script src="js/sections/profile.js?v=4"></script>
+  <script src="js/sections/cfb.js?v=4"></script>
+  <script src="js/sections/movies.js?v=4"></script>
+  <script src="js/sections/fun.js?v=4"></script>
+  <script src="js/sections/games.js?v=4"></script>
+  <script src="js/sections/notes.js?v=4"></script>
+  <script src="js/sections/books.js?v=4"></script>
+  <script src="js/sections/workout.js?v=4"></script>
+  <script src="js/sections/cpa.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

@@ -1,17 +1,19 @@
-/* Full-screen CPA celebration modal — first screen on app open.
-   Covers the viewport completely; main app is hidden until Continue. */
+/* Full-screen CPA celebration — auto-starts on load, blocks app until Continue.
+   Designed for mobile home-screen / PWA: fixed overlay, no scroll underlay. */
 (function (global) {
-  let active = false;
-  let closed = false;
+  var active = false;
+  var closed = false;
+  var fwHandle = null;
+  var doneCallbacks = [];
 
   function lockBody() {
-    const scrollY = window.scrollY || window.pageYOffset || 0;
+    var scrollY = window.scrollY || window.pageYOffset || 0;
     document.documentElement.classList.add("cpa-celebrate-active");
     document.body.classList.add("cpa-celebrate-active");
     document.body.style.top = "-" + scrollY + "px";
     document.body.dataset.cpaScrollY = String(scrollY);
 
-    const app = document.getElementById("app");
+    var app = document.getElementById("app");
     if (app) {
       app.setAttribute("aria-hidden", "true");
       app.setAttribute("inert", "");
@@ -19,46 +21,69 @@
   }
 
   function unlockBody() {
-    const scrollY = Number(document.body.dataset.cpaScrollY || 0);
+    var scrollY = Number(document.body.dataset.cpaScrollY || 0);
     document.documentElement.classList.remove("cpa-celebrate-active");
     document.body.classList.remove("cpa-celebrate-active");
     document.body.style.top = "";
     delete document.body.dataset.cpaScrollY;
     try {
       window.scrollTo(0, scrollY);
-    } catch (_) {}
+    } catch (e) {}
 
-    const app = document.getElementById("app");
+    var app = document.getElementById("app");
     if (app) {
       app.removeAttribute("aria-hidden");
       app.removeAttribute("inert");
     }
   }
 
+  function viewportSize() {
+    var vv = window.visualViewport;
+    var w = Math.max(
+      window.innerWidth || 0,
+      document.documentElement.clientWidth || 0,
+      vv && vv.width ? vv.width : 0
+    );
+    var h = Math.max(
+      window.innerHeight || 0,
+      document.documentElement.clientHeight || 0,
+      vv && vv.height ? vv.height : 0
+    );
+    // iOS home-screen sometimes reports 0 briefly
+    if (!w) w = screen.width || 390;
+    if (!h) h = screen.height || 844;
+    return { w: w, h: h };
+  }
+
   function startFireworks(canvas) {
-    const ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext("2d");
     if (!ctx) return { stop: function () {} };
 
-    let W = 0;
-    let H = 0;
-    let raf = 0;
-    let running = true;
-    const rockets = [];
-    const particles = [];
-    const PINKS = ["#ff4da6", "#ff69b4", "#ff1493", "#ff9ec8", "#f48fb1", "#ec407a", "#ff80ab"];
-    const GREENS = ["#00c853", "#69f0ae", "#1de9b6", "#00e676", "#76ff03", "#a5d6a7", "#b9f6ca"];
+    var W = 0;
+    var H = 0;
+    var raf = 0;
+    var running = true;
+    var rockets = [];
+    var particles = [];
+    var PINKS = ["#ff4da6", "#ff69b4", "#ff1493", "#ff9ec8", "#f48fb1", "#ec407a", "#ff80ab"];
+    var GREENS = ["#00c853", "#69f0ae", "#1de9b6", "#00e676", "#76ff03", "#a5d6a7", "#b9f6ca"];
 
     function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const cssW = Math.max(window.innerWidth, document.documentElement.clientWidth || 0);
-      const cssH = Math.max(window.innerHeight, document.documentElement.clientHeight || 0);
-      canvas.width = Math.floor(cssW * dpr);
-      canvas.height = Math.floor(cssH * dpr);
-      canvas.style.width = cssW + "px";
-      canvas.style.height = cssH + "px";
+      var size = viewportSize();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(size.w * dpr);
+      canvas.height = Math.floor(size.h * dpr);
+      canvas.style.width = size.w + "px";
+      canvas.style.height = size.h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      W = cssW;
-      H = cssH;
+      W = size.w;
+      H = size.h;
+      // Keep host sized to real viewport (iOS PWA)
+      var host = document.getElementById("cpa-celebrate");
+      if (host) {
+        host.style.width = size.w + "px";
+        host.style.height = size.h + "px";
+      }
     }
 
     function rand(a, b) {
@@ -66,7 +91,7 @@
     }
 
     function pickColor() {
-      const pool = Math.random() < 0.5 ? PINKS : GREENS;
+      var pool = Math.random() < 0.5 ? PINKS : GREENS;
       return pool[(Math.random() * pool.length) | 0];
     }
 
@@ -82,13 +107,14 @@
     }
 
     function explode(x, y, color) {
-      const n = 56 + ((Math.random() * 40) | 0);
-      for (let i = 0; i < n; i++) {
-        const angle = (Math.PI * 2 * i) / n + rand(-0.12, 0.12);
-        const speed = rand(1.8, 7.2);
+      var n = 56 + ((Math.random() * 40) | 0);
+      var i, angle, speed;
+      for (i = 0; i < n; i++) {
+        angle = (Math.PI * 2 * i) / n + rand(-0.12, 0.12);
+        speed = rand(1.8, 7.2);
         particles.push({
-          x,
-          y,
+          x: x,
+          y: y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           life: 1,
@@ -97,12 +123,12 @@
           size: rand(1.8, 3.6)
         });
       }
-      for (let i = 0; i < 22; i++) {
-        const angle = rand(0, Math.PI * 2);
-        const speed = rand(0.4, 2.5);
+      for (i = 0; i < 22; i++) {
+        angle = rand(0, Math.PI * 2);
+        speed = rand(0.4, 2.5);
         particles.push({
-          x,
-          y,
+          x: x,
+          y: y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           life: 1,
@@ -113,7 +139,7 @@
       }
     }
 
-    let spawnTimer = 0;
+    var spawnTimer = 0;
     function frame() {
       if (!running) return;
       ctx.fillStyle = "rgba(20, 8, 24, 0.18)";
@@ -126,20 +152,22 @@
         spawnTimer = 8 + ((Math.random() * 14) | 0);
       }
 
-      for (let i = rockets.length - 1; i >= 0; i--) {
-        const r = rockets[i];
+      var i, r, p, ti, t;
+      for (i = rockets.length - 1; i >= 0; i--) {
+        r = rockets[i];
         r.x += r.vx;
         r.y += r.vy;
         r.vy += 0.13;
         r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
-        r.trail.forEach((t, ti) => {
+        for (ti = 0; ti < r.trail.length; ti++) {
+          t = r.trail[ti];
           ctx.globalAlpha = ((ti + 1) / r.trail.length) * 0.7;
           ctx.fillStyle = r.color;
           ctx.beginPath();
           ctx.arc(t.x, t.y, 2.4, 0, Math.PI * 2);
           ctx.fill();
-        });
+        }
         ctx.globalAlpha = 1;
         ctx.fillStyle = r.color;
         ctx.beginPath();
@@ -151,8 +179,8 @@
         }
       }
 
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
+      for (i = particles.length - 1; i >= 0; i--) {
+        p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
         p.vy += 0.045;
@@ -172,34 +200,84 @@
       raf = requestAnimationFrame(frame);
     }
 
+    function onResize() {
+      resize();
+    }
+
     resize();
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", onResize);
+    }
+
     ctx.fillStyle = "#140818";
     ctx.fillRect(0, 0, W, H);
-    for (let i = 0; i < 6; i++) spawnRocket();
+    for (var k = 0; k < 6; k++) spawnRocket();
     raf = requestAnimationFrame(frame);
 
     return {
       stop: function () {
         running = false;
         cancelAnimationFrame(raf);
-        window.removeEventListener("resize", resize);
+        window.removeEventListener("resize", onResize);
+        window.removeEventListener("orientationchange", onResize);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener("resize", onResize);
+        }
       }
     };
   }
 
+  function finish() {
+    if (closed) return;
+    closed = true;
+    active = false;
+    if (fwHandle && fwHandle.stop) fwHandle.stop();
+    fwHandle = null;
+
+    var host = document.getElementById("cpa-celebrate");
+    if (host && host.parentNode) host.parentNode.removeChild(host);
+
+    unlockBody();
+
+    global.__CL_celebratePending = false;
+    global.__CL_celebrateDone = true;
+
+    var cbs = doneCallbacks.slice();
+    doneCallbacks = [];
+    for (var i = 0; i < cbs.length; i++) {
+      try {
+        cbs[i]();
+      } catch (e) {}
+    }
+    try {
+      window.dispatchEvent(new CustomEvent("cl-celebrate-done"));
+    } catch (e2) {}
+  }
+
   /**
-   * Activate the full-screen celebration (uses markup in index.html when present).
-   * Main app stays hidden until Continue.
+   * Ensure full-screen celebration is running. Safe to call multiple times.
+   * onDone runs when user presses Continue (or immediately if already dismissed).
    */
   function show(onDone) {
+    if (typeof onDone === "function") {
+      if (global.__CL_celebrateDone || closed) {
+        onDone();
+        return;
+      }
+      doneCallbacks.push(onDone);
+    }
+
     if (active) return;
     active = true;
     closed = false;
+    global.__CL_celebratePending = true;
+    global.__CL_celebrateDone = false;
 
     lockBody();
 
-    let host = document.getElementById("cpa-celebrate");
+    var host = document.getElementById("cpa-celebrate");
     if (!host) {
       host = document.createElement("div");
       host.id = "cpa-celebrate";
@@ -207,84 +285,116 @@
       host.setAttribute("role", "dialog");
       host.setAttribute("aria-modal", "true");
       host.setAttribute("aria-labelledby", "cpa-celebrate-title");
-      host.innerHTML = `
-        <canvas class="cpa-fw-canvas" aria-hidden="true"></canvas>
-        <div class="cpa-celebrate-inner">
-          <div class="cpa-celebrate-badge" aria-hidden="true">🎉 💚 💖 🎉</div>
-          <h1 class="cpa-celebrate-title" id="cpa-celebrate-title">
-            Congratulations to Lauren Wax, worlds hottest CPA
-          </h1>
-          <button type="button" class="btn btn-primary btn-block cpa-celebrate-btn" id="cpa-continue">
-            Continue
-          </button>
-        </div>
-      `;
+      host.innerHTML =
+        '<canvas class="cpa-fw-canvas" aria-hidden="true"></canvas>' +
+        '<div class="cpa-celebrate-inner">' +
+        '<div class="cpa-celebrate-badge" aria-hidden="true">🎉 💚 💖 🎉</div>' +
+        '<h1 class="cpa-celebrate-title" id="cpa-celebrate-title">' +
+        "Congratulations to Lauren Wax, worlds hottest CPA" +
+        "</h1>" +
+        '<button type="button" class="btn btn-primary btn-block cpa-celebrate-btn" id="cpa-continue">' +
+        "Continue" +
+        "</button>" +
+        "</div>";
       document.body.appendChild(host);
     } else {
       host.hidden = false;
-      host.style.display = "";
-      host.classList.add("cpa-celebrate");
-      // Ensure it is a direct child of body (above everything)
-      if (host.parentNode !== document.body) {
-        document.body.appendChild(host);
-      } else {
-        document.body.appendChild(host); // move to end for top paint order
-      }
+      host.style.display = "flex";
+      host.className = "cpa-celebrate";
+      // Always re-parent to body end so it paints above everything
+      document.body.appendChild(host);
     }
 
-    const canvas = host.querySelector(".cpa-fw-canvas");
-    const fw = canvas ? startFireworks(canvas) : { stop: function () {} };
+    var canvas = host.querySelector(".cpa-fw-canvas");
+    if (fwHandle && fwHandle.stop) fwHandle.stop();
+    fwHandle = canvas ? startFireworks(canvas) : { stop: function () {} };
 
-    function cleanup() {
-      if (closed) return;
-      closed = true;
-      fw.stop();
-      if (host && host.parentNode) host.parentNode.removeChild(host);
-      unlockBody();
-      active = false;
-      if (typeof onDone === "function") onDone();
-    }
-
-    const btn = host.querySelector("#cpa-continue");
-    if (btn) {
+    var btn = host.querySelector("#cpa-continue");
+    if (btn && !btn.dataset.bound) {
+      btn.dataset.bound = "1";
+      btn.addEventListener(
+        "click",
+        function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          finish();
+        },
+        false
+      );
+      // iOS sometimes needs touchend for reliability on home-screen web apps
+      btn.addEventListener(
+        "touchend",
+        function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          finish();
+        },
+        { passive: false }
+      );
       try {
         btn.focus({ preventScroll: true });
-      } catch (_) {}
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        cleanup();
-      });
+      } catch (e3) {}
     }
 
-    host.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        return;
-      }
-      if (e.key === "Tab") {
-        e.preventDefault();
-        if (btn) btn.focus();
-      }
-    });
-
+    // Block background scroll gestures on the overlay
     host.addEventListener(
       "touchmove",
-      (e) => {
-        if (!e.target.closest(".cpa-celebrate-inner")) e.preventDefault();
+      function (e) {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+    host.addEventListener(
+      "wheel",
+      function (e) {
+        e.preventDefault();
       },
       { passive: false }
     );
   }
 
+  function whenDone(cb) {
+    if (typeof cb !== "function") return;
+    if (global.__CL_celebrateDone || closed) {
+      cb();
+      return;
+    }
+    doneCallbacks.push(cb);
+    // Ensure show is running
+    show();
+  }
+
   function shouldShow() {
-    return true;
+    return !global.__CL_celebrateDone && !closed;
   }
 
   function hasSeen() {
-    return false;
+    return !!global.__CL_celebrateDone;
   }
 
   global.CL = global.CL || {};
-  global.CL.celebration = { show, hasSeen, shouldShow, isActive: () => active };
+  global.CL.celebration = {
+    show: show,
+    whenDone: whenDone,
+    hasSeen: hasSeen,
+    shouldShow: shouldShow,
+    isActive: function () {
+      return active && !closed;
+    }
+  };
+
+  // Bridge for app boot
+  global.CLCelebrateDone = whenDone;
+  global.__CL_celebratePending = true;
+  global.__CL_celebrateDone = false;
+
+  // AUTO-START immediately — do not wait for app.js / routing
+  function autoStart() {
+    show();
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", autoStart);
+  } else {
+    autoStart();
+  }
 })(window);

@@ -156,18 +156,25 @@
   }
 
   function init() {
-    // Do not route or show home until the full-screen celebration is dismissed
+    // Do not route or show home until Continue on the celebration modal
     let appReady = false;
 
     function unlockShell() {
       document.documentElement.classList.remove("cpa-celebrate-active");
       document.body.classList.remove("cpa-celebrate-active");
       document.body.style.top = "";
+      document.body.style.position = "";
       const app = document.getElementById("app");
       if (app) {
         app.removeAttribute("aria-hidden");
         app.removeAttribute("inert");
+        app.style.display = "";
       }
+      // Restore theme color after dark celebration
+      try {
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", "#0A3161");
+      } catch (_) {}
     }
 
     window.addEventListener("hashchange", () => {
@@ -194,11 +201,10 @@
     });
 
     function bootApp() {
+      if (appReady) return;
       appReady = true;
       unlockShell();
-      if (!location.hash || location.hash === "#") {
-        location.replace("#home");
-      }
+      location.replace("#home");
       refreshHeader();
       route();
       if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
@@ -206,26 +212,36 @@
       }
     }
 
-    // FIRST SCREEN: full-screen fireworks modal. App shell stays hidden until Continue.
+    // Keep main empty while locked
     const main = document.getElementById("main");
     if (main) main.innerHTML = "";
 
+    // Wait for Continue — celebration.js auto-starts the full-screen modal
     try {
-      if (CL.celebration && typeof CL.celebration.show === "function") {
-        CL.celebration.show(() => {
-          // Continue pressed → reveal app + home only now
-          if (!location.hash || location.hash === "#") {
-            location.replace("#home");
-          } else {
-            location.replace("#home");
-          }
-          bootApp();
-        });
-      } else {
+      if (window.__CL_celebrateDone) {
         bootApp();
+      } else if (typeof window.CLCelebrateDone === "function") {
+        window.CLCelebrateDone(bootApp);
+      } else if (CL.celebration && typeof CL.celebration.whenDone === "function") {
+        CL.celebration.whenDone(bootApp);
+      } else if (CL.celebration && typeof CL.celebration.show === "function") {
+        CL.celebration.show(bootApp);
+      } else {
+        // Fallback: no celebration module — still require the static Continue button
+        const btn = document.getElementById("cpa-continue");
+        if (btn) {
+          btn.addEventListener("click", function onStaticContinue(e) {
+            e.preventDefault();
+            const host = document.getElementById("cpa-celebrate");
+            if (host) host.remove();
+            bootApp();
+          });
+        } else {
+          bootApp();
+        }
       }
     } catch (err) {
-      console.warn("Celebration failed:", err);
+      console.warn("Celebration boot failed:", err);
       bootApp();
     }
 
