@@ -14,8 +14,6 @@
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
     workout: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
     workouts: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
-    cpa: { title: "CPA Rankings", nav: "more", render: () => CL.sections.cpa.render },
-    rankings: { title: "CPA Rankings", nav: "more", render: () => CL.sections.cpa.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -24,6 +22,7 @@
     const hash = (location.hash || "#home").replace(/^#/, "").split("?")[0].toLowerCase();
     // Legacy routes
     if (hash === "food" || hash === "news") return "cfb";
+    if (hash === "cpa" || hash === "rankings") return "home";
     return ROUTES[hash] ? hash : "home";
   }
 
@@ -93,12 +92,6 @@
             <p>Maxes · weekly strength</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="cpa">
-            <span class="emoji">🥇</span>
-            <strong>CPA Rankings</strong>
-            <p>Best looking · smartest</p>
-            <span class="badge">#1</span>
-          </button>
           <button type="button" class="more-card" data-go="games">
             <span class="emoji">🎮</span>
             <strong>Games</strong>
@@ -156,98 +149,30 @@
   }
 
   function init() {
-    // Do not route or show home until Continue on the celebration modal
-    let appReady = false;
-
-    function unlockShell() {
-      document.documentElement.classList.remove("cpa-celebrate-active");
-      document.body.classList.remove("cpa-celebrate-active");
-      document.body.style.top = "";
-      document.body.style.position = "";
-      const app = document.getElementById("app");
-      if (app) {
-        app.removeAttribute("aria-hidden");
-        app.removeAttribute("inert");
-        app.style.display = "";
-      }
-      // Restore theme color after dark celebration
-      try {
-        const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", "#0A3161");
-      } catch (_) {}
+    if (!location.hash || location.hash === "#") {
+      location.replace("#home");
     }
 
-    window.addEventListener("hashchange", () => {
-      if (!appReady) return;
-      route();
-    });
-
-    document.getElementById("btn-home")?.addEventListener("click", (e) => {
-      if (!appReady) {
-        e.preventDefault();
-        return;
-      }
+    window.addEventListener("hashchange", route);
+    document.getElementById("btn-home")?.addEventListener("click", () => {
       location.hash = "#home";
     });
 
     document.querySelectorAll(".nav-item").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        if (!appReady) {
-          e.preventDefault();
-          return;
-        }
+      el.addEventListener("click", () => {
         sessionStorage.setItem("cl_seen_home", "1");
       });
     });
 
-    function bootApp() {
-      if (appReady) return;
-      appReady = true;
-      unlockShell();
-      location.replace("#home");
-      refreshHeader();
-      route();
-      if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
-        CL.cfb.getDailyEdition({ force: false }).catch(() => {});
-      }
-    }
+    refreshHeader();
+    route();
 
-    // Keep main empty while locked
-    const main = document.getElementById("main");
-    if (main) main.innerHTML = "";
-
-    // Wait for Continue — celebration.js auto-starts the full-screen modal
-    try {
-      if (window.__CL_celebrateDone) {
-        bootApp();
-      } else if (typeof window.CLCelebrateDone === "function") {
-        window.CLCelebrateDone(bootApp);
-      } else if (CL.celebration && typeof CL.celebration.whenDone === "function") {
-        CL.celebration.whenDone(bootApp);
-      } else if (CL.celebration && typeof CL.celebration.show === "function") {
-        CL.celebration.show(bootApp);
-      } else {
-        // Fallback: no celebration module — still require the static Continue button
-        const btn = document.getElementById("cpa-continue");
-        if (btn) {
-          btn.addEventListener("click", function onStaticContinue(e) {
-            e.preventDefault();
-            const host = document.getElementById("cpa-celebrate");
-            if (host) host.remove();
-            bootApp();
-          });
-        } else {
-          bootApp();
-        }
-      }
-    } catch (err) {
-      console.warn("Celebration boot failed:", err);
-      bootApp();
+    if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
+      CL.cfb.getDailyEdition({ force: false }).catch(() => {});
     }
 
     let syncRefreshTimer = null;
     window.addEventListener("cl-sync-update", (e) => {
-      if (!appReady) return;
       const k = e.detail && e.detail.key;
       if (!k) return;
       clearTimeout(syncRefreshTimer);
