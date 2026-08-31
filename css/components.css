@@ -2202,13 +2202,13 @@
 
 .farm-critter .critter-svg {
   width: 52px;
-  height: 38px;
+  height: 44px;
   display: block;
 }
 
 .farm-critter.critter-rat .critter-svg {
   width: 62px;
-  height: 42px;
+  height: 46px;
 }
 
 .critter-name {
@@ -2302,42 +2302,66 @@
   50%, 100% { transform: scaleX(1); }
 }
 
-.farm-flyer {
+.flight-map { padding-bottom: 12px; }
+.flight-map.is-lost {
+  border-color: rgba(178, 34, 52, 0.35);
+  background: linear-gradient(180deg, #fff7f7, #fff);
+}
+.lost-banner {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--red-500);
+  background: var(--pink-100);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.lost-note-card { border-color: rgba(178, 34, 52, 0.28); }
+
+.route-map {
+  position: relative;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(10, 49, 97, 0.12);
+  background: #cfe4c8;
+}
+.route-svg { width: 100%; height: 100%; display: block; }
+.map-label {
+  font-size: 9px;
+  font-weight: 700;
+  fill: #0a3161;
+  font-family: var(--font);
+}
+.map-courier {
   position: absolute;
-  top: 18px;
-  width: 48px;
-  z-index: 6;
-  animation: fly-across 7s linear infinite;
-  filter: drop-shadow(0 3px 2px rgba(0,0,0,0.2));
+  width: 52px;
+  margin-left: -26px;
+  margin-top: -30px;
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.22));
+  transition: left 0.85s linear, top 0.85s linear;
 }
-.farm-flyer .critter-svg { width: 48px; height: 34px; }
-.farm-flyer.flyer-p2 { animation-duration: 8.5s; top: 28px; animation-delay: -2s; }
-.farm-flyer.flyer-p3 { animation-duration: 9s; top: 12px; animation-delay: -4s; }
-.farm-flyer.flyer-p4 { animation-duration: 11s; top: 22px; animation-delay: -1s; }
-.farm-flyer.flyer-p5 { animation-duration: 12s; top: 16px; animation-delay: -5s; }
-.farm-flyer.flyer-rat {
-  top: auto;
-  bottom: 4px;
-  animation: scurry-road 6s linear infinite;
+.map-courier .critter-svg {
+  width: 52px;
+  height: 40px;
+  display: block;
 }
+.map-courier.face-left { transform: scaleX(-1); }
+.map-courier.face-left .flyer-note { transform: scaleX(-1); }
 .flyer-note {
   position: absolute;
   top: -2px;
   right: -2px;
   font-size: 0.7rem;
 }
-
-@keyframes fly-across {
-  0% { left: -12%; transform: scaleX(1) translateY(0); }
-  50% { transform: scaleX(1) translateY(-6px); }
-  100% { left: 108%; transform: scaleX(1) translateY(0); }
-}
-@keyframes scurry-road {
-  0% { left: -10%; transform: scaleX(1); }
-  49% { left: 78%; transform: scaleX(1); }
-  50% { left: 78%; transform: scaleX(-1); }
-  99% { left: -10%; transform: scaleX(-1); }
-  100% { left: -10%; transform: scaleX(1); }
+.map-readout {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--navy-500);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .pigeon-actions { margin-top: 14px; }
@@ -2374,8 +2398,8 @@
   line-height: 1.3;
 }
 .courier-eta { font-weight: 700; color: var(--navy-500); }
-.courier-art { height: 36px; }
-.courier-art .critter-svg { width: 52px; height: 36px; }
+.courier-art { height: 42px; }
+.courier-art .critter-svg { width: 52px; height: 42px; }
 
 .stat-grid {
   display: grid;
@@ -2398,8 +2422,8 @@
   letter-spacing: 0.04em;
 }
 .stat-pill strong { font-size: 0.88rem; }
-.animal-sheet-art { width: 88px; margin: 0 auto 8px; }
-.animal-sheet-art .critter-svg { width: 88px; height: 64px; }
+.animal-sheet-art { width: 96px; margin: 0 auto 8px; }
+.animal-sheet-art .critter-svg { width: 96px; height: 72px; }
 
 .scroll-stage { margin-top: 8px; }
 .scroll-roll {
@@ -2539,13 +2563,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   .farm-critter,
-  .farm-flyer,
   .farm-cloud,
   .farm-critter .leg,
   .farm-critter .wing,
   .critter-sprite,
-  .unroll .parchment {
+  .unroll .parchment,
+  .map-courier {
     animation: none;
+    transition: none;
   }
 }
 

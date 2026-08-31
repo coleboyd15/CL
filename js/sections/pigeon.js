@@ -146,7 +146,12 @@
     const saved = (state.animals && state.animals[id]) || {};
     const lock = (state.locks && state.locks[id]) || null;
     const now = Date.now();
-    const locked = !!(lock && lock.until > now);
+    let effectiveLock = lock && lock.until > now ? lock : null;
+    if (!effectiveLock) {
+      const trip = lettersList(state).find((l) => l.animalId === id && isEnRoute(l, now));
+      if (trip) effectiveLock = { letterId: trip.id, until: letterReturnsAt(trip) };
+    }
+    const locked = !!effectiveLock;
     return {
       id: def.id,
       type: def.type,
@@ -158,7 +163,7 @@
       hue: def.hue,
       blurb: def.blurb,
       locked,
-      lock: locked ? lock : null
+      lock: effectiveLock
     };
   }
 
@@ -333,12 +338,26 @@
         CL.toast("Your letter arrived to " + (letter.toName || "them"));
       }
     } else if (letter.status === "lost") {
-      if (!who || isFromMe(letter, who)) {
-        CL.toast((letter.animalName || "The pigeon") + " lost the letter");
-        sendNotification("Letter lost", (letter.lostReason || "The letter did not arrive.") + "");
-      }
+      CL.toast((letter.animalName || "The pigeon") + " lost the note");
+      sendNotification(
+        (letter.animalName || "Courier") + " lost the note",
+        letter.lostReason || "The note did not arrive. They are heading back to the farm."
+      );
     }
     updateBadges();
+  }
+
+  function letterReturnsAt(letter) {
+    if (!letter) return 0;
+    if (letter.returnsAt) return letter.returnsAt;
+    const outbound = Math.max(0, (letter.arrivesAt || 0) - (letter.sentAt || 0));
+    return (letter.arrivesAt || 0) + outbound;
+  }
+
+  function isEnRoute(letter, now) {
+    now = now || Date.now();
+    if (!letter) return false;
+    return now < letterReturnsAt(letter);
   }
 
   function resolveArrivals() {
@@ -347,10 +366,20 @@
     let changed = false;
     const resolved = [];
     lettersList(state).forEach((letter) => {
+      if (!letter.returnsAt && letter.arrivesAt && letter.sentAt) {
+        letter.returnsAt = letterReturnsAt(letter);
+        changed = true;
+      }
+      const lock = state.locks && letter.animalId ? state.locks[letter.animalId] : null;
+      if (lock && letter.returnsAt && lock.until < letter.returnsAt && isEnRoute(letter, now)) {
+        lock.until = letter.returnsAt;
+        changed = true;
+      }
       if (letter.status === "transit" && now >= (letter.arrivesAt || 0)) {
         letter.status = letter.willDeliver ? "delivered" : "lost";
         letter.resolvedAt = now;
         letter.updatedAt = now;
+        if (!letter.returnsAt) letter.returnsAt = letterReturnsAt(letter);
         if (letter.status === "lost" && !letter.lostReason) {
           letter.lostReason = LOST_REASONS[Math.floor(Math.random() * LOST_REASONS.length)];
         }
@@ -361,9 +390,11 @@
     Object.keys(state.locks || {}).forEach((id) => {
       const lock = state.locks[id];
       const letter = lock && lock.letterId ? state.letters[lock.letterId] : null;
-      if (!lock || lock.until <= now || !letter || letter.status !== "transit") {
+      const until = (lock && lock.until) || letterReturnsAt(letter);
+      if (!lock || now >= until) {
         delete state.locks[id];
         changed = true;
+        if (letter) resolved.push(letter);
       }
     });
     if (changed) setState(state);
@@ -421,6 +452,151 @@
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+
+  const MAP_W = 320;
+  const MAP_H = 200;
+  const MAP_PAD = 38;
+
+  function hasGeo(letter) {
+    return (
+      letter &&
+      letter.fromLat != null &&
+      letter.fromLon != null &&
+      letter.toLat != null &&
+      letter.toLon != null &&
+      !(letter.fromLat === letter.toLat && letter.fromLon === letter.toLon)
+    );
+  }
+
+  function tripState(letter, now) {
+    now = now || Date.now();
+    const sent = letter.sentAt || now;
+    const arr = letter.arrivesAt || now;
+    const ret = letterReturnsAt(letter);
+    const oneWay = Math.max(Number(letter.distanceMiles) || 0, 0);
+    if (now < arr) {
+      const t = Math.max(0, Math.min(1, (now - sent) / Math.max(1, arr - sent)));
+      return {
+        phase: "outbound",
+        t,
+        pathT: t,
+        remainMiles: oneWay * (1 - t),
+        remainMs: Math.max(0, arr - now),
+        headingHome: false
+      };
+    }
+    if (now < ret) {
+      const t = Math.max(0, Math.min(1, (now - arr) / Math.max(1, ret - arr)));
+      return {
+        phase: "return",
+        t,
+        pathT: 1 - t,
+        remainMiles: oneWay * (1 - t),
+        remainMs: Math.max(0, ret - now),
+        headingHome: true
+      };
+    }
+    return {
+      phase: "home",
+      t: 1,
+      pathT: 0,
+      remainMiles: 0,
+      remainMs: 0,
+      headingHome: true
+    };
+  }
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function currentLatLon(letter, trip) {
+    if (!hasGeo(letter)) return null;
+    const t = trip.t;
+    if (trip.phase === "outbound") {
+      return {
+        lat: lerp(letter.fromLat, letter.toLat, t),
+        lon: lerp(letter.fromLon, letter.toLon, t)
+      };
+    }
+    if (trip.phase === "return") {
+      return {
+        lat: lerp(letter.toLat, letter.fromLat, t),
+        lon: lerp(letter.toLon, letter.fromLon, t)
+      };
+    }
+    return { lat: letter.fromLat, lon: letter.fromLon };
+  }
+
+  function formatCoord(lat, lon) {
+    const ns = lat >= 0 ? "N" : "S";
+    const ew = lon >= 0 ? "E" : "W";
+    return Math.abs(lat).toFixed(2) + "°" + ns + ", " + Math.abs(lon).toFixed(2) + "°" + ew;
+  }
+
+  function bezierPoint(a, c, b, t) {
+    const u = 1 - t;
+    return {
+      x: u * u * a.x + 2 * u * t * c.x + t * t * b.x,
+      y: u * u * a.y + 2 * u * t * c.y + t * t * b.y
+    };
+  }
+
+  function routeModel(letter) {
+    const geo = hasGeo(letter);
+    const from = geo
+      ? { lat: letter.fromLat, lon: letter.fromLon }
+      : { lat: 0, lon: 0 };
+    const to = geo
+      ? { lat: letter.toLat, lon: letter.toLon }
+      : { lat: 0.18, lon: 1 };
+    let minLat = Math.min(from.lat, to.lat);
+    let maxLat = Math.max(from.lat, to.lat);
+    let minLon = Math.min(from.lon, to.lon);
+    let maxLon = Math.max(from.lon, to.lon);
+    const latPad = Math.max((maxLat - minLat) * 0.4, 0.22);
+    const lonPad = Math.max((maxLon - minLon) * 0.4, 0.32);
+    minLat -= latPad;
+    maxLat += latPad;
+    minLon -= lonPad;
+    maxLon += lonPad;
+    function xy(lat, lon) {
+      const x = MAP_PAD + ((lon - minLon) / (maxLon - minLon)) * (MAP_W - MAP_PAD * 2);
+      const y = MAP_PAD + (1 - (lat - minLat) / (maxLat - minLat)) * (MAP_H - MAP_PAD * 2);
+      return { x, y };
+    }
+    const a = xy(from.lat, from.lon);
+    const b = xy(to.lat, to.lon);
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const bulge = Math.min(52, Math.max(18, len * 0.22));
+    const c = { x: mx + (-dy / len) * bulge, y: my + (dx / len) * bulge };
+    const d =
+      "M " +
+      a.x.toFixed(1) +
+      " " +
+      a.y.toFixed(1) +
+      " Q " +
+      c.x.toFixed(1) +
+      " " +
+      c.y.toFixed(1) +
+      " " +
+      b.x.toFixed(1) +
+      " " +
+      b.y.toFixed(1);
+    return { geo, a, b, c, d, from, to };
+  }
+
+  function courierMapPos(letter, now) {
+    const trip = tripState(letter, now);
+    const model = routeModel(letter);
+    const pt = bezierPoint(model.a, model.c, model.b, trip.pathT);
+    const ahead = bezierPoint(model.a, model.c, model.b, Math.min(1, trip.pathT + 0.02));
+    return { trip, model, pt, faceLeft: ahead.x < pt.x };
   }
 
   async function geocode(query) {
@@ -509,6 +685,23 @@
   }
 
   /* ---------- SVGs ---------- */
+  function blondeCurls(ox, oy, s) {
+    s = s || 1;
+    return `
+      <g class="hair" transform="translate(${ox} ${oy}) scale(${s})">
+        <ellipse cx="0" cy="0.5" rx="6.4" ry="5.1" fill="#f4d35e"/>
+        <ellipse cx="5.4" cy="-2.4" rx="5.5" ry="4.7" fill="#f7e38a"/>
+        <ellipse cx="-5.2" cy="-1.4" rx="5" ry="4.1" fill="#e8c84a"/>
+        <ellipse cx="1.4" cy="-5.6" rx="4.4" ry="3.8" fill="#fff3b0"/>
+        <ellipse cx="7.4" cy="1.2" rx="3.5" ry="3.1" fill="#d4a017"/>
+        <ellipse cx="-6.8" cy="1.6" rx="3.3" ry="2.9" fill="#f0d56a"/>
+        <path d="M-7.2 -1 q-5.2 -7.2 -1.2 -10.2" fill="none" stroke="#f4d35e" stroke-width="2.15" stroke-linecap="round"/>
+        <path d="M7.2 -2.2 q6.2 -7.2 2.2 -10.4" fill="none" stroke="#e8c84a" stroke-width="2.15" stroke-linecap="round"/>
+        <path d="M1.2 -6.2 q2.2 -7.4 6.4 -7.2" fill="none" stroke="#f7e38a" stroke-width="1.95" stroke-linecap="round"/>
+        <path d="M-2.4 -5.2 q-3.2 -6.4 -7.4 -4.2" fill="none" stroke="#d4a017" stroke-width="1.85" stroke-linecap="round"/>
+      </g>`;
+  }
+
   function pigeonSvg(hue) {
     const palettes = {
       slate: { body: "#6b7c93", wing: "#4d5d73", head: "#5c6d84", chest: "#d9dde4", neck: "#3d6b8a" },
@@ -519,19 +712,20 @@
     };
     const p = palettes[hue] || palettes.gray;
     return `
-      <svg class="critter-svg pigeon-svg" viewBox="0 0 72 52" aria-hidden="true">
-        <ellipse cx="22" cy="32" rx="7" ry="4" fill="${p.wing}"/>
-        <ellipse cx="34" cy="30" rx="16" ry="11" fill="${p.body}"/>
-        <ellipse cx="32" cy="28" rx="11" ry="7" fill="${p.chest}"/>
-        <ellipse class="wing" cx="30" cy="27" rx="10" ry="6" fill="${p.wing}"/>
-        <path d="M18 30 Q10 24 8 32 Q14 34 20 33Z" fill="${p.body}"/>
-        <circle cx="50" cy="22" r="9" fill="${p.head}"/>
-        <path d="M48 26 Q52 30 46 32" fill="${p.neck}" opacity="0.85"/>
-        <path d="M58 21 L70 23.5 L58 26Z" fill="#e0a020"/>
-        <circle cx="53" cy="20" r="1.7" fill="#1a1a1a"/>
-        <circle cx="53.5" cy="19.5" r="0.5" fill="#fff"/>
-        <g class="leg back"><path d="M30 40 L28 50 L24 50" fill="none" stroke="#c47a3a" stroke-width="1.8" stroke-linecap="round"/></g>
-        <g class="leg front"><path d="M40 40 L42 50 L46 50" fill="none" stroke="#c47a3a" stroke-width="1.8" stroke-linecap="round"/></g>
+      <svg class="critter-svg pigeon-svg" viewBox="0 -8 72 62" aria-hidden="true">
+        <ellipse cx="22" cy="34" rx="7" ry="4" fill="${p.wing}"/>
+        <ellipse cx="34" cy="32" rx="16" ry="11" fill="${p.body}"/>
+        <ellipse cx="32" cy="30" rx="11" ry="7" fill="${p.chest}"/>
+        <ellipse class="wing" cx="30" cy="29" rx="10" ry="6" fill="${p.wing}"/>
+        <path d="M18 32 Q10 26 8 34 Q14 36 20 35Z" fill="${p.body}"/>
+        <circle cx="50" cy="24" r="9" fill="${p.head}"/>
+        <path d="M48 28 Q52 32 46 34" fill="${p.neck}" opacity="0.85"/>
+        <path d="M58 23 L70 25.5 L58 28Z" fill="#e0a020"/>
+        <circle cx="53" cy="22" r="1.7" fill="#1a1a1a"/>
+        <circle cx="53.5" cy="21.5" r="0.5" fill="#fff"/>
+        ${blondeCurls(50, 14, 0.95)}
+        <g class="leg back"><path d="M30 42 L28 52 L24 52" fill="none" stroke="#c47a3a" stroke-width="1.8" stroke-linecap="round"/></g>
+        <g class="leg front"><path d="M40 42 L42 52 L46 52" fill="none" stroke="#c47a3a" stroke-width="1.8" stroke-linecap="round"/></g>
       </svg>`;
   }
 
@@ -550,17 +744,7 @@
         <circle cx="72" cy="32" r="1.5" fill="#d45a68"/>
         <circle cx="58" cy="26" r="1.7" fill="#1a1a1a"/>
         <circle cx="58.6" cy="25.5" r="0.5" fill="#fff"/>
-        <g class="hair">
-          <ellipse cx="54" cy="12" rx="5" ry="4.2" fill="#f4d35e"/>
-          <ellipse cx="60" cy="10" rx="5.4" ry="4.6" fill="#f7e38a"/>
-          <ellipse cx="57" cy="7" rx="4.2" ry="3.6" fill="#e8c84a"/>
-          <ellipse cx="50" cy="10" rx="4" ry="3.4" fill="#f0d56a"/>
-          <ellipse cx="63" cy="12" rx="3.6" ry="3.2" fill="#d4a017"/>
-          <ellipse cx="56" cy="5" rx="3.2" ry="2.8" fill="#fff3b0"/>
-          <path d="M49 12 q-4 -6 -1 -9" fill="none" stroke="#f4d35e" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M64 11 q5 -6 2 -9" fill="none" stroke="#e8c84a" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M56 4 q1 -6 5 -6" fill="none" stroke="#f7e38a" stroke-width="2" stroke-linecap="round"/>
-        </g>
+        ${blondeCurls(56, 12, 1.12)}
         <g class="leg back"><path d="M28 44 L26 54 L22 54" fill="none" stroke="#6e3d28" stroke-width="2" stroke-linecap="round"/></g>
         <g class="leg front"><path d="M46 44 L48 54 L52 54" fill="none" stroke="#6e3d28" stroke-width="2" stroke-linecap="round"/></g>
       </svg>`;
@@ -592,24 +776,59 @@
       </svg>`;
   }
 
-  function critterHtml(animal, i) {
+  function critterHtml(animal, i, away) {
     const svg = animal.type === "rat" ? ratSvg() : pigeonSvg(animal.hue);
-    const away = animal.locked ? " is-away" : "";
+    const gone = away || animal.locked ? " is-away" : "";
     const label = CL.escapeHtml(animal.name);
     return `
-      <button type="button" class="farm-critter critter-${animal.id} critter-${animal.type}${away}" data-animal="${animal.id}" style="--i:${i}" title="${label}">
+      <button type="button" class="farm-critter critter-${animal.id} critter-${animal.type}${gone}" data-animal="${animal.id}" style="--i:${i}" title="${label}">
         <span class="critter-sprite">${svg}</span>
         <span class="critter-name">${label}</span>
       </button>`;
   }
 
-  function flyerHtml(animal, letter) {
-    const svg = animal.type === "rat" ? ratSvg() : pigeonSvg(animal.hue);
-    return `
-      <div class="farm-flyer flyer-${animal.type} flyer-${animal.id}" title="${CL.escapeHtml(animal.name)} in transit">
-        ${svg}
-        <span class="flyer-note">✉</span>
-      </div>`;
+  function flightStatusCopy(letter, trip) {
+    if (letter.status === "lost") {
+      return (letter.animalName || "The pigeon") + " lost the note and is heading home.";
+    }
+    if (trip.phase === "return") {
+      return (letter.animalName || "Courier") + " delivered the note and is heading home.";
+    }
+    return (letter.animalName || "Courier") + " is on the way.";
+  }
+
+  function applyFlightDom(el, letter, now) {
+    if (!el || !letter) return;
+    now = now || Date.now();
+    const pos = courierMapPos(letter, now);
+    const trip = pos.trip;
+    const loc = currentLatLon(letter, trip);
+    const courier = el.querySelector(".map-courier");
+    if (courier) {
+      courier.style.left = (pos.pt.x / MAP_W) * 100 + "%";
+      courier.style.top = (pos.pt.y / MAP_H) * 100 + "%";
+      courier.classList.toggle("face-left", pos.faceLeft);
+    }
+    const posEl = el.querySelector("[data-pos]");
+    if (posEl) {
+      posEl.textContent = loc
+        ? formatCoord(loc.lat, loc.lon)
+        : trip.headingHome
+          ? "On the path home"
+          : "On the path";
+    }
+    const remainEl = el.querySelector("[data-remain]");
+    if (remainEl) {
+      remainEl.textContent =
+        formatMiles(trip.remainMiles) +
+        " mi remaining · " +
+        formatDuration(trip.remainMs) +
+        (trip.headingHome ? " to farm" : " left");
+    }
+    const statusEl = el.querySelector("[data-flight-status]");
+    if (statusEl) statusEl.textContent = flightStatusCopy(letter, trip);
+    el.classList.toggle("is-lost", letter.status === "lost");
+    el.classList.toggle("is-return", trip.phase === "return");
   }
 
   const composeDraft = {
@@ -662,17 +881,21 @@
       const who = getWho();
       const names = coupleNames();
       const unread = unreadCount(state, who);
+      const now = Date.now();
       const inFlight = lettersList(state)
-        .filter((l) => l.status === "transit")
-        .sort((a, b) => a.arrivesAt - b.arrivesAt);
-      const flyers = inFlight
-        .map((l) => {
-          const a = animals.find((x) => x.id === l.animalId);
-          return a ? flyerHtml(a, l) : "";
-        })
-        .join("");
+        .filter((l) => isEnRoute(l, now))
+        .sort((a, b) => (a.arrivesAt || 0) - (b.arrivesAt || 0));
+      const awayIds = {};
+      inFlight.forEach((l) => {
+        awayIds[l.animalId] = true;
+      });
       const lostRecent = lettersList(state)
-        .filter((l) => l.status === "lost" && Date.now() - (l.resolvedAt || 0) < 36e5 * 12)
+        .filter(
+          (l) =>
+            l.status === "lost" &&
+            !isEnRoute(l, now) &&
+            now - (l.resolvedAt || 0) < 36e5 * 12
+        )
         .sort((a, b) => (b.resolvedAt || 0) - (a.resolvedAt || 0))
         .slice(0, 3);
 
@@ -691,7 +914,6 @@
               <div class="farm-sun"></div>
               <div class="farm-cloud c1"></div>
               <div class="farm-cloud c2"></div>
-              ${flyers}
             </div>
             <div class="farm-hills"></div>
             <div class="farm-ground">
@@ -702,13 +924,8 @@
                 ${unread ? `<span class="chest-badge">${unread > 9 ? "9+" : unread}</span>` : ""}
               </button>
               <div class="farm-fence"></div>
-              ${animals.map((a, i) => critterHtml(a, i)).join("")}
+              ${animals.map((a, i) => critterHtml(a, i, awayIds[a.id])).join("")}
             </div>
-            ${
-              inFlight.some((l) => l.animalId === "deq")
-                ? `<div class="farm-road" aria-hidden="true"><span>Dequanteous is on the road</span></div>`
-                : ""
-            }
           </div>
 
           <div class="pigeon-actions">
@@ -719,8 +936,13 @@
           ${
             inFlight.length
               ? `<div class="section-block" style="margin-top:16px">
-                  <div class="section-label">In flight</div>
-                  <div class="stack-sm">${inFlight.map(flightCard).join("")}</div>
+                  <div class="section-label">Live route</div>
+                  <div class="stack-sm">${inFlight
+                    .map((l) => {
+                      const a = animals.find((x) => x.id === l.animalId);
+                      return flightMapCard(l, a);
+                    })
+                    .join("")}</div>
                 </div>`
               : ""
           }
@@ -728,7 +950,7 @@
           ${
             lostRecent.length
               ? `<div class="section-block">
-                  <div class="section-label">Lost in transit</div>
+                  <div class="section-label">Lost notes</div>
                   <div class="stack-sm">${lostRecent.map(lostCard).join("")}</div>
                 </div>`
               : ""
@@ -765,27 +987,86 @@
         </div>`;
     }
 
-    function flightCard(letter) {
-      const left = formatDuration((letter.arrivesAt || 0) - Date.now());
-      const miles = letter.distanceMiles != null ? formatMiles(letter.distanceMiles) + " mi · " : "";
+    function flightMapCard(letter, animal) {
+      const now = Date.now();
+      const pos = courierMapPos(letter, now);
+      const trip = pos.trip;
+      const loc = currentLatLon(letter, trip);
+      const fromName = letter.fromLabel || letter.fromPlace || letter.fromName || "Here";
+      const toName = letter.toLabel || letter.toPlace || letter.toName || "There";
+      const svg = animal
+        ? animal.type === "rat"
+          ? ratSvg()
+          : pigeonSvg(animal.hue)
+        : pigeonSvg("gray");
+      const posLabel = loc
+        ? formatCoord(loc.lat, loc.lon)
+        : trip.headingHome
+          ? "On the path home"
+          : "On the path";
+      const remainLabel =
+        formatMiles(trip.remainMiles) +
+        " mi remaining · " +
+        formatDuration(trip.remainMs) +
+        (trip.headingHome ? " to farm" : " left");
+      const lostNow = letter.status === "lost";
       return `
-        <article class="card flight-card">
-          <div class="card-title">${CL.escapeHtml(letter.animalName || "Courier")} · in transit</div>
-          <p class="card-meta">${CL.escapeHtml(letter.fromName || "")} → ${CL.escapeHtml(
+        <article class="card flight-map ${lostNow ? "is-lost" : ""} ${
+          trip.phase === "return" ? "is-return" : ""
+        }" data-flight="${CL.escapeHtml(letter.id)}">
+          ${
+            lostNow
+              ? `<div class="lost-banner">${CL.escapeHtml(
+                  letter.animalName || "The pigeon"
+                )} lost the note</div>`
+              : ""
+          }
+          <div class="route-map" aria-label="Route map">
+            <svg viewBox="0 0 ${MAP_W} ${MAP_H}" class="route-svg">
+              <defs>
+                <pattern id="mapgrid-${CL.escapeHtml(letter.id)}" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(10,49,97,0.08)" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="${MAP_W}" height="${MAP_H}" fill="#d7ead0"/>
+              <rect width="${MAP_W}" height="${MAP_H}" fill="url(#mapgrid-${CL.escapeHtml(letter.id)})"/>
+              <circle cx="${MAP_W / 2}" cy="28" r="46" fill="rgba(126,183,220,0.35)"/>
+              <path d="${pos.model.d}" class="route-line" fill="none" stroke="rgba(10,49,97,0.22)" stroke-width="5" stroke-linecap="round"/>
+              <path d="${pos.model.d}" class="route-line-travel" fill="none" stroke="#0a3161" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="6 5"/>
+              <circle cx="${pos.model.a.x.toFixed(1)}" cy="${pos.model.a.y.toFixed(1)}" r="5.5" fill="#b22234"/>
+              <circle cx="${pos.model.b.x.toFixed(1)}" cy="${pos.model.b.y.toFixed(1)}" r="5.5" fill="#0a3161"/>
+              <text x="${pos.model.a.x.toFixed(1)}" y="${(pos.model.a.y + 16).toFixed(1)}" text-anchor="middle" class="map-label">${CL.escapeHtml(
+                String(fromName).slice(0, 22)
+              )}</text>
+              <text x="${pos.model.b.x.toFixed(1)}" y="${(pos.model.b.y + 16).toFixed(1)}" text-anchor="middle" class="map-label">${CL.escapeHtml(
+                String(toName).slice(0, 22)
+              )}</text>
+            </svg>
+            <div class="map-courier ${pos.faceLeft ? "face-left" : ""}" style="left:${
+              (pos.pt.x / MAP_W) * 100
+            }%;top:${(pos.pt.y / MAP_H) * 100}%">
+              ${svg}
+              ${lostNow ? "" : `<span class="flyer-note">✉</span>`}
+            </div>
+          </div>
+          <div class="card-title" style="margin-top:10px">${CL.escapeHtml(letter.animalName || "Courier")}</div>
+          <p class="card-meta" data-flight-status>${CL.escapeHtml(flightStatusCopy(letter, trip))}</p>
+          <p class="card-meta" style="margin:0">${CL.escapeHtml(letter.fromName || "")} → ${CL.escapeHtml(
             letter.toName || ""
           )}</p>
-          <p class="card-meta" style="margin:0">${miles}<span data-eta="${letter.arrivesAt}">${left}</span> remaining</p>
+          <p class="map-readout"><span data-pos>${CL.escapeHtml(posLabel)}</span></p>
+          <p class="map-readout"><span data-remain>${CL.escapeHtml(remainLabel)}</span></p>
         </article>`;
     }
 
     function lostCard(letter) {
       return `
-        <article class="card">
-          <div class="card-title">${CL.escapeHtml(letter.animalName || "Courier")} lost a letter</div>
+        <article class="card lost-note-card">
+          <div class="card-title">${CL.escapeHtml(letter.animalName || "The pigeon")} lost the note</div>
           <p class="card-meta">${CL.escapeHtml(letter.fromName || "")} → ${CL.escapeHtml(
             letter.toName || ""
           )} · ${CL.escapeHtml(formatWhen(letter.resolvedAt))}</p>
-          <p class="card-meta" style="margin:0">${CL.escapeHtml(letter.lostReason || "The letter did not arrive.")}</p>
+          <p class="card-meta" style="margin:0">${CL.escapeHtml(letter.lostReason || "The note did not arrive.")}</p>
         </article>`;
     }
 
@@ -1055,6 +1336,8 @@
       const transit = etaMs(miles, animal);
       const now = Date.now();
       const willDeliver = Math.random() * 100 < animal.delivery;
+      const fromGeo = compose.fromGeo;
+      const toGeo = compose.toGeo;
       const letter = {
         id: CL.uid("pg"),
         fromName: who,
@@ -1062,14 +1345,19 @@
         body,
         fromPlace: fromP,
         toPlace: toP,
-        fromLabel: (compose.fromGeo && compose.fromGeo.label) || fromP,
-        toLabel: (compose.toGeo && compose.toGeo.label) || toP,
+        fromLabel: (fromGeo && fromGeo.label) || fromP,
+        toLabel: (toGeo && toGeo.label) || toP,
+        fromLat: fromGeo ? fromGeo.lat : null,
+        fromLon: fromGeo ? fromGeo.lon : null,
+        toLat: toGeo ? toGeo.lat : null,
+        toLon: toGeo ? toGeo.lon : null,
         distanceMiles: Math.round(miles * 10) / 10,
         animalId: animal.id,
         animalName: animal.name,
         animalSpeed: animal.speed,
         sentAt: now,
         arrivesAt: now + transit,
+        returnsAt: now + transit * 2,
         willDeliver,
         status: "transit",
         read: false,
@@ -1086,7 +1374,7 @@
         return;
       }
       st.letters[letter.id] = letter;
-      st.locks[animal.id] = { letterId: letter.id, until: letter.arrivesAt };
+      st.locks[animal.id] = { letterId: letter.id, until: letter.returnsAt };
       setState(st);
       resetCompose();
       CL.toast(animal.name + " is on the way · " + formatDuration(transit));
@@ -1247,6 +1535,12 @@
         paint();
         return;
       }
+      const st = getState();
+      const now = Date.now();
+      root.querySelectorAll("[data-flight]").forEach((el) => {
+        const letter = st.letters[el.dataset.flight];
+        if (letter) applyFlightDom(el, letter, now);
+      });
       root.querySelectorAll("[data-eta]").forEach((el) => {
         const until = Number(el.dataset.eta);
         el.textContent = formatDuration(until - Date.now());
