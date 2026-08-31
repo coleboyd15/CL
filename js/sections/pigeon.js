@@ -685,69 +685,21 @@
   }
 
   /* ---------- SVGs ---------- */
-  function blondeCurls(ox, oy, s) {
-    s = s || 1;
-    return `
-      <g class="hair" transform="translate(${ox} ${oy}) scale(${s})">
-        <ellipse cx="0" cy="0.5" rx="6.4" ry="5.1" fill="#f4d35e"/>
-        <ellipse cx="5.4" cy="-2.4" rx="5.5" ry="4.7" fill="#f7e38a"/>
-        <ellipse cx="-5.2" cy="-1.4" rx="5" ry="4.1" fill="#e8c84a"/>
-        <ellipse cx="1.4" cy="-5.6" rx="4.4" ry="3.8" fill="#fff3b0"/>
-        <ellipse cx="7.4" cy="1.2" rx="3.5" ry="3.1" fill="#d4a017"/>
-        <ellipse cx="-6.8" cy="1.6" rx="3.3" ry="2.9" fill="#f0d56a"/>
-        <path d="M-7.2 -1 q-5.2 -7.2 -1.2 -10.2" fill="none" stroke="#f4d35e" stroke-width="2.15" stroke-linecap="round"/>
-        <path d="M7.2 -2.2 q6.2 -7.2 2.2 -10.4" fill="none" stroke="#e8c84a" stroke-width="2.15" stroke-linecap="round"/>
-        <path d="M1.2 -6.2 q2.2 -7.4 6.4 -7.2" fill="none" stroke="#f7e38a" stroke-width="1.95" stroke-linecap="round"/>
-        <path d="M-2.4 -5.2 q-3.2 -6.4 -7.4 -4.2" fill="none" stroke="#d4a017" stroke-width="1.85" stroke-linecap="round"/>
-      </g>`;
-  }
+  const SPRITE = {
+    p1: "assets/pigeon/p1.png",
+    p2: "assets/pigeon/p2.png",
+    p3: "assets/pigeon/p3.png",
+    p4: "assets/pigeon/p4.png",
+    p5: "assets/pigeon/p5.png",
+    deq: "assets/pigeon/deq.png"
+  };
 
-  function pigeonSvg(hue) {
-    const palettes = {
-      slate: { body: "#6b7c93", wing: "#4d5d73", head: "#5c6d84", chest: "#d9dde4", neck: "#3d6b8a" },
-      white: { body: "#e8e4dc", wing: "#cfc9bc", head: "#f2efe8", chest: "#fff", neck: "#8eb8c9" },
-      brown: { body: "#8a5a3c", wing: "#6e442c", head: "#7a4e34", chest: "#d4b08a", neck: "#6a8f4e" },
-      green: { body: "#6d7178", wing: "#545860", head: "#5e646c", chest: "#cfd3c8", neck: "#3f8f6b" },
-      gray: { body: "#8a8f96", wing: "#6f747c", head: "#7a8088", chest: "#d8dbe0", neck: "#5b6f88" }
-    };
-    const p = palettes[hue] || palettes.gray;
-    return `
-      <svg class="critter-svg pigeon-svg" viewBox="0 -8 72 62" aria-hidden="true">
-        <ellipse cx="22" cy="34" rx="7" ry="4" fill="${p.wing}"/>
-        <ellipse cx="34" cy="32" rx="16" ry="11" fill="${p.body}"/>
-        <ellipse cx="32" cy="30" rx="11" ry="7" fill="${p.chest}"/>
-        <ellipse class="wing" cx="30" cy="29" rx="10" ry="6" fill="${p.wing}"/>
-        <path d="M18 32 Q10 26 8 34 Q14 36 20 35Z" fill="${p.body}"/>
-        <circle cx="50" cy="24" r="9" fill="${p.head}"/>
-        <path d="M48 28 Q52 32 46 34" fill="${p.neck}" opacity="0.85"/>
-        <path d="M58 23 L70 25.5 L58 28Z" fill="#e0a020"/>
-        <circle cx="53" cy="22" r="1.7" fill="#1a1a1a"/>
-        <circle cx="53.5" cy="21.5" r="0.5" fill="#fff"/>
-        ${blondeCurls(50, 14, 0.95)}
-        <g class="leg back"><path d="M30 42 L28 52 L24 52" fill="none" stroke="#c47a3a" stroke-width="1.8" stroke-linecap="round"/></g>
-        <g class="leg front"><path d="M40 42 L42 52 L46 52" fill="none" stroke="#c47a3a" stroke-width="1.8" stroke-linecap="round"/></g>
-      </svg>`;
-  }
-
-  function ratSvg() {
-    return `
-      <svg class="critter-svg rat-svg" viewBox="0 0 84 56" aria-hidden="true">
-        <path d="M16 34 Q2 18 14 8" fill="none" stroke="#8a5a3c" stroke-width="3.2" stroke-linecap="round"/>
-        <ellipse cx="36" cy="34" rx="18" ry="12" fill="#8b5a3c"/>
-        <ellipse cx="36" cy="38" rx="12" ry="7" fill="#a56b48"/>
-        <circle cx="56" cy="28" r="11" fill="#9a6344"/>
-        <ellipse cx="52" cy="16" rx="4.2" ry="5.4" fill="#e8a090"/>
-        <ellipse cx="62" cy="16" rx="4.2" ry="5.4" fill="#e8a090"/>
-        <ellipse cx="52" cy="16.6" rx="2.2" ry="3" fill="#f4c4b8"/>
-        <ellipse cx="62" cy="16.6" rx="2.2" ry="3" fill="#f4c4b8"/>
-        <ellipse cx="66" cy="32" rx="7" ry="4.4" fill="#c4896a"/>
-        <circle cx="72" cy="32" r="1.5" fill="#d45a68"/>
-        <circle cx="58" cy="26" r="1.7" fill="#1a1a1a"/>
-        <circle cx="58.6" cy="25.5" r="0.5" fill="#fff"/>
-        ${blondeCurls(56, 12, 1.12)}
-        <g class="leg back"><path d="M28 44 L26 54 L22 54" fill="none" stroke="#6e3d28" stroke-width="2" stroke-linecap="round"/></g>
-        <g class="leg front"><path d="M46 44 L48 54 L52 54" fill="none" stroke="#6e3d28" stroke-width="2" stroke-linecap="round"/></g>
-      </svg>`;
+  function animalArt(animal, extraClass) {
+    const id = animal && animal.id ? animal.id : "p5";
+    const src = SPRITE[id] || SPRITE.p5;
+    const name = (animal && animal.name) || "Courier";
+    const cls = "critter-img" + (extraClass ? " " + extraClass : "");
+    return `<img class="${cls}" src="${src}" alt="${CL.escapeHtml(name)}" draggable="false" />`;
   }
 
   function barnSvg() {
@@ -777,12 +729,11 @@
   }
 
   function critterHtml(animal, i, away) {
-    const svg = animal.type === "rat" ? ratSvg() : pigeonSvg(animal.hue);
     const gone = away || animal.locked ? " is-away" : "";
     const label = CL.escapeHtml(animal.name);
     return `
       <button type="button" class="farm-critter critter-${animal.id} critter-${animal.type}${gone}" data-animal="${animal.id}" style="--i:${i}" title="${label}">
-        <span class="critter-sprite">${svg}</span>
+        <span class="critter-sprite">${animalArt(animal)}</span>
         <span class="critter-name">${label}</span>
       </button>`;
   }
@@ -994,11 +945,7 @@
       const loc = currentLatLon(letter, trip);
       const fromName = letter.fromLabel || letter.fromPlace || letter.fromName || "Here";
       const toName = letter.toLabel || letter.toPlace || letter.toName || "There";
-      const svg = animal
-        ? animal.type === "rat"
-          ? ratSvg()
-          : pigeonSvg(animal.hue)
-        : pigeonSvg("gray");
+      const sprite = animalArt(animal || { id: letter.animalId || "p5", name: letter.animalName || "Courier" });
       const posLabel = loc
         ? formatCoord(loc.lat, loc.lon)
         : trip.headingHome
@@ -1045,7 +992,7 @@
             <div class="map-courier ${pos.faceLeft ? "face-left" : ""}" style="left:${
               (pos.pt.x / MAP_W) * 100
             }%;top:${(pos.pt.y / MAP_H) * 100}%">
-              ${svg}
+              ${sprite}
               ${lostNow ? "" : `<span class="flyer-note">✉</span>`}
             </div>
           </div>
@@ -1117,7 +1064,7 @@
         subtitle: a.type === "rat" ? "Rat · 8 mph courier" : "Homing pigeon",
         bodyHtml: `
           <div class="animal-sheet">
-            <div class="animal-sheet-art">${a.type === "rat" ? ratSvg() : pigeonSvg(a.hue)}</div>
+            <div class="animal-sheet-art">${animalArt(a)}</div>
             <p class="card-meta">${CL.escapeHtml(a.blurb)}</p>
             <div class="stat-grid">
               <div class="stat-pill"><span>Speed</span><strong>${a.speed} mph</strong></div>
@@ -1218,7 +1165,7 @@
         <button type="button" class="courier-card${selected}${locked}" data-pick="${a.id}" ${
           a.locked ? "disabled" : ""
         }>
-          <div class="courier-art">${a.type === "rat" ? ratSvg() : pigeonSvg(a.hue)}</div>
+          <div class="courier-art">${animalArt(a)}</div>
           <strong>${CL.escapeHtml(a.name)}</strong>
           <span class="courier-stats">${a.speed} mph · ${a.delivery}% delivery · stam ${a.stamina}</span>
           <span class="courier-eta">${CL.escapeHtml(lockTxt)}</span>

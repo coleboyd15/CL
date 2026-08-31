@@ -2026,7 +2026,7 @@
   overflow: hidden;
   border: 2px solid rgba(10, 49, 97, 0.18);
   box-shadow: var(--shadow);
-  min-height: 268px;
+  min-height: 300px;
   background: #7eaa52;
 }
 
@@ -2102,7 +2102,7 @@
 
 .farm-ground {
   position: relative;
-  height: 150px;
+  height: 180px;
   background:
     linear-gradient(180deg, #6fa046 0 18px, #7eaa52 18px 70%, #8b5a2b 70% 76%, #6fa046 76% 100%);
 }
@@ -2193,22 +2193,23 @@
   position: absolute;
   z-index: 3;
   background: none;
-  width: 58px;
+  width: 78px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  filter: drop-shadow(0 2px 1px rgba(0,0,0,0.18));
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.22));
 }
 
-.farm-critter .critter-svg {
-  width: 52px;
-  height: 44px;
+.farm-critter.critter-rat {
+  width: 92px;
+}
+
+.critter-img {
   display: block;
-}
-
-.farm-critter.critter-rat .critter-svg {
-  width: 62px;
-  height: 46px;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .critter-name {
@@ -2229,9 +2230,8 @@
   display: none;
 }
 
-.farm-critter .leg { transform-box: fill-box; transform-origin: top center; }
-.farm-critter .wing { transform-box: fill-box; transform-origin: 20% 40%; animation: wing-idle 0.9s ease-in-out infinite; }
-.critter-sprite { display: block; }
+.critter-sprite { display: block; width: 100%; }
+.critter-sprite .critter-img { animation: sprite-bob 0.4s ease-in-out infinite; }
 
 .critter-p1 { left: 18%; bottom: 48px; animation: walk-a 16s linear infinite; }
 .critter-p2 { left: 58%; bottom: 62px; animation: walk-b 22s linear infinite; }
@@ -2247,20 +2247,9 @@
 .critter-p5 .critter-sprite { animation: face-a 20s linear infinite; }
 .critter-deq .critter-sprite { animation: face-a 28s linear infinite; }
 
-.farm-critter .leg.front { animation: step-front 0.38s linear infinite; }
-.farm-critter .leg.back { animation: step-back 0.38s linear infinite; }
-
-@keyframes step-front {
-  0%, 100% { transform: rotate(18deg); }
-  50% { transform: rotate(-16deg); }
-}
-@keyframes step-back {
-  0%, 100% { transform: rotate(-16deg); }
-  50% { transform: rotate(18deg); }
-}
-@keyframes wing-idle {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-12deg); }
+@keyframes sprite-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 @keyframes walk-a {
@@ -2335,17 +2324,17 @@
 }
 .map-courier {
   position: absolute;
-  width: 52px;
-  margin-left: -26px;
-  margin-top: -30px;
+  width: 72px;
+  margin-left: -36px;
+  margin-top: -42px;
   pointer-events: none;
   z-index: 3;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,0.22));
   transition: left 0.85s linear, top 0.85s linear;
 }
-.map-courier .critter-svg {
-  width: 52px;
-  height: 40px;
+.map-courier .critter-img {
+  width: 72px;
+  height: auto;
   display: block;
 }
 .map-courier.face-left { transform: scaleX(-1); }
@@ -2383,7 +2372,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 118px;
+  min-height: 168px;
 }
 .courier-card.selected {
   border-color: var(--navy-300);
@@ -2398,8 +2387,17 @@
   line-height: 1.3;
 }
 .courier-eta { font-weight: 700; color: var(--navy-500); }
-.courier-art { height: 42px; }
-.courier-art .critter-svg { width: 52px; height: 42px; }
+.courier-art {
+  height: 86px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.courier-art .critter-img {
+  width: auto;
+  height: 84px;
+  max-width: 100%;
+}
 
 .stat-grid {
   display: grid;
@@ -2422,8 +2420,14 @@
   letter-spacing: 0.04em;
 }
 .stat-pill strong { font-size: 0.88rem; }
-.animal-sheet-art { width: 96px; margin: 0 auto 8px; }
-.animal-sheet-art .critter-svg { width: 96px; height: 72px; }
+.animal-sheet-art {
+  width: 180px;
+  margin: 0 auto 8px;
+}
+.animal-sheet-art .critter-img {
+  width: 180px;
+  height: auto;
+}
 
 .scroll-stage { margin-top: 8px; }
 .scroll-roll {
@@ -2564,8 +2568,7 @@
 @media (prefers-reduced-motion: reduce) {
   .farm-critter,
   .farm-cloud,
-  .farm-critter .leg,
-  .farm-critter .wing,
+  .critter-sprite .critter-img,
   .critter-sprite,
   .unroll .parchment,
   .map-courier {
