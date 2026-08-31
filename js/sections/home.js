@@ -6,6 +6,7 @@
       const greet = CL.profile.greeting();
       const label = CL.profile.coupleLabel();
       const day = CL.daycount ? CL.daycount.formatLong() : "";
+      const pigeonUnread = CL.pigeon && typeof CL.pigeon.unreadCount === "function" ? CL.pigeon.unreadCount() : 0;
 
       const welcomeLine = CL.profile.hasNames()
         ? `${greet}, ${CL.escapeHtml(names.myName)} & ${CL.escapeHtml(names.partnerName)}`
@@ -101,10 +102,10 @@
                 <strong>Books</strong>
                 <span>Book club</span>
               </a>
-              <a href="#workout" class="quick-card">
-                <span class="emoji">⛏️⛏️</span>
-                <strong>⛏️⛏️</strong>
-                <span>Strength week</span>
+              <a href="#pigeon" class="quick-card">
+                <span class="emoji">🕊️</span>
+                <strong>Carrier Pigeon</strong>
+                <span>${pigeonUnread ? pigeonUnread + " new letter" + (pigeonUnread === 1 ? "" : "s") : "Letters across the farm"}</span>
               </a>
               <a href="#profile" class="quick-card">
                 <span class="emoji">💕</span>
@@ -136,6 +137,10 @@
               <button type="button" class="card home-action" data-go="fun">
                 <strong>Something playful</strong>
                 <p class="card-meta">Shake the Magic 8-Ball</p>
+              </button>
+              <button type="button" class="card home-action" data-go="pigeon">
+                <strong>Send a pigeon</strong>
+                <p class="card-meta">Write a letter on the farm scroll</p>
               </button>
             </div>
           </div>

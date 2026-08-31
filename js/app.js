@@ -12,8 +12,9 @@
     more: { title: "More", nav: "more", render: () => renderMore },
     notes: { title: "Notes", nav: "more", render: () => CL.sections.notes.render },
     books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
-    workout: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
-    workouts: { title: "⛏️⛏️", nav: "more", render: () => CL.sections.workout.render },
+    pigeon: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
+    mail: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
+    carrier: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -23,6 +24,7 @@
     // Legacy routes
     if (hash === "food" || hash === "news") return "cfb";
     if (hash === "cpa" || hash === "rankings") return "home";
+    if (hash === "workout" || hash === "workouts") return "home";
     return ROUTES[hash] ? hash : "home";
   }
 
@@ -52,11 +54,15 @@
       dayEl.title = CL.daycount.formatLong(info);
       dayEl.setAttribute("aria-label", CL.daycount.formatLong(info));
     }
+    if (CL.pigeon && typeof CL.pigeon.updateBadges === "function") {
+      CL.pigeon.updateBadges();
+    }
   }
 
   CL.refreshHeader = refreshHeader;
 
   function renderMore(root) {
+    const pigeonUnread = CL.pigeon && typeof CL.pigeon.unreadCount === "function" ? CL.pigeon.unreadCount() : 0;
     root.innerHTML = `
       <section class="page">
         <h1 class="page-title">More</h1>
@@ -86,11 +92,11 @@
             <p>Shelves, reviews & recs</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="workout">
-            <span class="emoji">⛏️⛏️</span>
-            <strong>⛏️⛏️</strong>
-            <p>Maxes · weekly strength</p>
-            <span class="badge">Open</span>
+          <button type="button" class="more-card" data-go="pigeon">
+            <span class="emoji">🕊️</span>
+            <strong>Carrier Pigeon</strong>
+            <p>Farm post · letters in flight</p>
+            <span class="badge">${pigeonUnread ? pigeonUnread + " new" : "Open"}</span>
           </button>
           <button type="button" class="more-card" data-go="games">
             <span class="emoji">🎮</span>
@@ -109,7 +115,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile and track Tech vs A&amp;M win totals, movies, games, notes &amp; workouts.
+            (Firebase). Set names under Profile and track Tech vs A&amp;M win totals, movies, games, notes &amp; Carrier Pigeon.
           </p>
         </div>
       </section>
@@ -132,6 +138,10 @@
     const rawHash = (location.hash || "").replace(/^#/, "").split("?")[0].toLowerCase();
     if (rawHash === "food" || rawHash === "news") {
       location.replace("#cfb");
+      return;
+    }
+    if (rawHash === "workout" || rawHash === "workouts") {
+      location.replace("#home");
       return;
     }
 
@@ -164,8 +174,24 @@
       });
     });
 
+    try {
+      localStorage.removeItem("cl_workouts");
+    } catch (_) {}
+    const purgeWorkoutsRemote = () => {
+      if (CL.storage.get("_purged_workouts_v1", false)) return;
+      if (!(CL.sync && typeof CL.sync.isJoined === "function" && CL.sync.isJoined())) return;
+      CL.storage.set("_purged_workouts_v1", true, { skipSync: true });
+      CL.sync.pushKey("workouts", null);
+    };
+    purgeWorkoutsRemote();
+    window.addEventListener("cl-sync-status", purgeWorkoutsRemote);
+
     refreshHeader();
     route();
+
+    if (CL.pigeon && typeof CL.pigeon.startBackground === "function") {
+      CL.pigeon.startBackground();
+    }
 
     if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
       CL.cfb.getDailyEdition({ force: false }).catch(() => {});

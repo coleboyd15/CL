@@ -185,6 +185,7 @@
 
   function applyRemoteData(remote) {
     if (!remote || typeof remote !== "object") return;
+    let pigeonRepush = null;
     applyingRemote = true;
     try {
       CL.storage.SYNC_KEYS.forEach((k) => {
@@ -199,6 +200,13 @@
           if (k === "games" && val && typeof val === "object") {
             val = mergeGamesData(CL.storage.get("games", { active: null, history: [] }), val);
           }
+          if (k === "pigeon" && val && typeof val === "object" && CL.pigeon && typeof CL.pigeon.merge === "function") {
+            const incoming = val;
+            val = CL.pigeon.merge(CL.storage.get("pigeon", null), incoming);
+            if (CL.pigeon.shouldRepush && CL.pigeon.shouldRepush(incoming, val)) {
+              pigeonRepush = val;
+            }
+          }
           CL.storage.set(k, val, { remote: true });
         }
       });
@@ -209,6 +217,9 @@
       );
     } finally {
       applyingRemote = false;
+    }
+    if (pigeonRepush) {
+      pushKey("pigeon", pigeonRepush);
     }
   }
 
@@ -359,6 +370,7 @@
     const meta = val.meta || {};
 
     // Merge: remote wins for shared lists; keep local-only fields on profile
+    let pigeonRepush = null;
     applyingRemote = true;
     try {
       CL.storage.SYNC_KEYS.forEach((k) => {
@@ -373,6 +385,12 @@
             remoteData[k]
           );
           CL.storage.set(k, merged, { remote: true });
+        } else if (k === "pigeon" && CL.pigeon && typeof CL.pigeon.merge === "function") {
+          const merged = CL.pigeon.merge(CL.storage.get("pigeon", null), remoteData[k]);
+          CL.storage.set(k, merged, { remote: true });
+          if (CL.pigeon.shouldRepush && CL.pigeon.shouldRepush(remoteData[k], merged)) {
+            pigeonRepush = merged;
+          }
         } else {
           CL.storage.set(k, remoteData[k], { remote: true });
         }
@@ -387,6 +405,7 @@
     Object.keys(local).forEach((k) => {
       if (remoteData[k] == null) patch[k] = local[k];
     });
+    if (pigeonRepush) patch.pigeon = pigeonRepush;
     if (Object.keys(patch).length) {
       pushing = true;
       try {

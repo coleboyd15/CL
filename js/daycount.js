@@ -1,23 +1,36 @@
-/* Day counter since April 11, 2026 */
+/* Day counter since April 11, 2026
+   Months increment only on the 11th of each month (calendar months, not 30-day blocks).
+   Apr 11 = M0 D0 · May 11 = M1 D0 · Aug 11 = M4 D0 · Sep 11 = M5 D0
+   Between 11ths: months completed + days since the last 11th. */
 (function (global) {
   // Local midnight of start date (Month is 0-indexed: 3 = April)
   const START = new Date(2026, 3, 11);
-  const MONTH_LEN = 30;
+  const dayMs = 24 * 60 * 60 * 1000;
 
   function startOfDay(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
 
+  function lastEleventh(today) {
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    const d = today.getDate();
+    if (d >= 11) return new Date(y, m, 11);
+    return new Date(y, m - 1, 11);
+  }
+
+  function monthsBetween(from, to) {
+    return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+  }
+
   /**
-   * elapsed = whole days since Apr 11 (0 on that day).
-   * Month/Day = complete 30-day months + remaining days (not floor(elapsed/30)+1).
-   * Example: 100 days → M3 D10; 101 days → M3 D11.
+   * Month number increases only on the 11th.
+   * Days = whole days since the most recent 11th (0 on the 11th).
    */
   function getDayCount(now) {
     now = now || new Date();
     const start = startOfDay(START);
     const today = startOfDay(now);
-    const dayMs = 24 * 60 * 60 * 1000;
     let elapsed = Math.round((today.getTime() - start.getTime()) / dayMs);
     if (elapsed < 0) {
       return {
@@ -30,13 +43,13 @@
         startLabel: "Apr 11, 2026"
       };
     }
-    const months = Math.floor(elapsed / MONTH_LEN);
-    const days = elapsed % MONTH_LEN;
+    const last11 = lastEleventh(today);
+    const months = Math.max(0, monthsBetween(start, last11));
+    const days = Math.max(0, Math.round((today.getTime() - last11.getTime()) / dayMs));
     return {
       elapsed,
       months,
       days,
-      // aliases used by older callers
       month: months,
       dayInMonth: days,
       beforeStart: false,

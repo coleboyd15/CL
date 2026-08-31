@@ -5,14 +5,14 @@
   /**
    * Keys that sync across couple devices when a group is joined.
    * App updates never wipe these — they live in localStorage (and Firebase when linked).
-   * Includes: game scores/history, movies, books, notes, workouts, profile names.
+   * Includes: game scores/history, movies, books, notes, pigeon mail, profile names.
    */
   const SYNC_KEYS = [
     "movies",
     "books",
     "games",
     "notes",
-    "workouts",
+    "pigeon",
     "profile"
   ];
 
