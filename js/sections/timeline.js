@@ -4,6 +4,8 @@
   const COL_W = 52;
   const GANTT_START = "2026-09";
   const GANTT_END_FINITE = "2029-12";
+  const GANTT_YEAR_START = 2030;
+  const GANTT_YEAR_END = 2100;
 
   const WHO_META = {
     cole: { label: "Cole", short: "Cole" },
@@ -258,14 +260,36 @@
       months.push(k);
       k = ymAdd(k, 1);
     }
-    months.push("_onward");
-    const hasDeath = itemList(state).some((it) => it.marker && /death/i.test(it.title));
-    if (hasDeath) months.push("_death");
-    else {
-      const markers = itemList(state).filter((it) => it.marker);
-      if (markers.length) months.push("_death");
+    for (let y = GANTT_YEAR_START; y <= GANTT_YEAR_END; y++) {
+      months.push("y-" + y);
     }
+    const hasDeath = itemList(state).some((it) => it.marker);
+    if (hasDeath) months.push("_death");
     return months;
+  }
+
+  function colIndexForYM(ym, months) {
+    if (!ym || !months || !months.length) return -1;
+    const exact = months.indexOf(ym);
+    if (exact >= 0) return exact;
+    const p = parseYM(ym);
+    if (!p) return -1;
+    if (ym < months[0]) return 0;
+    const yearCol = months.indexOf("y-" + p.y);
+    if (yearCol >= 0) return yearCol;
+    if (p.y > GANTT_YEAR_END) {
+      const lastYear = months.indexOf("y-" + GANTT_YEAR_END);
+      if (lastYear >= 0) return lastYear;
+    }
+    return -1;
+  }
+
+  function lastTimeCol(months) {
+    const y = months.indexOf("y-" + GANTT_YEAR_END);
+    if (y >= 0) return y;
+    const death = months.indexOf("_death");
+    if (death > 0) return death - 1;
+    return months.length - 1;
   }
 
   function blockSpan(item, months) {
@@ -274,22 +298,13 @@
       if (i < 0) return null;
       return { startI: i, endI: i };
     }
-    let startI = months.indexOf(item.start);
-    if (startI < 0) {
-      if (item.start < months[0]) startI = 0;
-      else if (item.open) startI = months.indexOf("_onward");
-      else return null;
-    }
+    let startI = colIndexForYM(item.start, months);
     if (startI < 0) return null;
     let endI;
     if (item.open) {
-      const onward = months.indexOf("_onward");
-      endI = onward >= 0 ? onward : months.length - 1;
+      endI = lastTimeCol(months);
     } else {
-      endI = months.indexOf(item.end);
-      if (endI < 0) {
-        endI = item.end > GANTT_END_FINITE ? months.indexOf("_onward") : startI;
-      }
+      endI = colIndexForYM(item.end, months);
     }
     if (endI < 0) endI = startI;
     if (endI < startI) endI = startI;
@@ -390,11 +405,15 @@
       const width = months.length * COL_W;
       const head = months
         .map((m) => {
-          if (m === "_onward") {
-            return `<div class="tl-col-h" style="width:${COL_W}px">Onward</div>`;
-          }
           if (m === "_death") {
             return `<div class="tl-col-h tl-col-death" style="width:${COL_W}px">Death</div>`;
+          }
+          if (String(m).indexOf("y-") === 0) {
+            const year = m.slice(2);
+            const nowYear = String(nowYM).slice(0, 4);
+            return `<div class="tl-col-h tl-col-year ${year === nowYear ? "is-now" : ""}" style="width:${COL_W}px">${CL.escapeHtml(
+              year
+            )}</div>`;
           }
           return `<div class="tl-col-h ${m === nowYM ? "is-now" : ""}" style="width:${COL_W}px">${CL.escapeHtml(
             monthLabel(m, true)
@@ -434,7 +453,7 @@
           </div>
           ${laneRows}
         </div>
-        <p class="filter-hint">Swipe sideways on the chart · current month is highlighted</p>
+        <p class="filter-hint">Swipe sideways — monthly through 2029, then years through 2100</p>
       `;
     }
 
@@ -514,10 +533,10 @@
     function scrollGanttToNow(nowYM, months) {
       const scroller = root.querySelector("#tl-gantt");
       if (!scroller) return;
-      let idx = months.indexOf(nowYM);
+      let idx = colIndexForYM(nowYM, months);
       if (idx < 0) {
         if (nowYM < GANTT_START) idx = 0;
-        else idx = months.indexOf(GANTT_END_FINITE);
+        else idx = lastTimeCol(months);
       }
       if (idx < 0) idx = 0;
       const left = Math.max(0, 64 + idx * COL_W - scroller.clientWidth / 2);

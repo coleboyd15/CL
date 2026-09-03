@@ -2872,6 +2872,7 @@
   font-weight: 800;
 }
 .tl-col-death { color: var(--text-muted); font-style: italic; }
+.tl-col-year { font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
 .tl-block {
   position: absolute;
   top: 4px;
