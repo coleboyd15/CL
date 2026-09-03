@@ -15,6 +15,8 @@
     pigeon: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     mail: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     carrier: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
+    timeline: { title: "Timeline", nav: "more", render: () => CL.sections.timeline.render },
+    schedule: { title: "Timeline", nav: "more", render: () => CL.sections.timeline.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -47,12 +49,56 @@
         mark.classList.add("has-photo");
       }
     }
-    const dayEl = document.getElementById("header-daycount");
-    if (dayEl && CL.daycount) {
-      const info = CL.daycount.getDayCount();
-      dayEl.textContent = CL.daycount.formatCompact(info);
-      dayEl.title = CL.daycount.formatLong(info);
-      dayEl.setAttribute("aria-label", CL.daycount.formatLong(info));
+    if (CL.daycount && typeof CL.daycount.getCountdowns === "function") {
+      const c = CL.daycount.getCountdowns();
+      const annivEl = document.getElementById("header-daycount");
+      const annivWrap = document.getElementById("hc-anniv");
+      if (annivEl) {
+        const compact = c.anniv.beforeStart
+          ? "Soon"
+          : "M" + c.anniv.months + " D" + c.anniv.days;
+        const extra = c.anniv.beforeStart ? "" : " · " + c.anniv.elapsed + "d";
+        annivEl.textContent = compact + extra;
+        const long = CL.daycount.formatLong(c.anniv);
+        if (annivWrap) {
+          annivWrap.title = long;
+          annivWrap.setAttribute("aria-label", long);
+        }
+      }
+      const breakEl = document.getElementById("header-break");
+      const breakWrap = document.getElementById("hc-break");
+      if (breakEl) {
+        breakEl.textContent = c.breakLabel;
+        const bTitle =
+          c.breakDays > 0
+            ? c.breakDays + " days until break (Dec 15, 2026)"
+            : c.breakDays === 0
+              ? "Break is today · Dec 15, 2026"
+              : "Break date has passed";
+        if (breakWrap) {
+          breakWrap.title = bTitle;
+          breakWrap.setAttribute("aria-label", bTitle);
+          breakWrap.classList.toggle("is-soon", c.breakDays >= 0 && c.breakDays <= 30);
+          breakWrap.classList.toggle("is-done", c.breakDays < 0);
+        }
+      }
+      const ldEl = document.getElementById("header-ld");
+      const ldWrap = document.getElementById("hc-ld");
+      if (ldEl) {
+        ldEl.textContent = c.ldLabel;
+        const lTitle =
+          c.ldDays > 0
+            ? c.ldDays + " days until long distance is potentially over (Jul 1, 2027)"
+            : c.ldDays === 0
+              ? "Long distance is potentially over today · Jul 1, 2027"
+              : "That date has passed";
+        if (ldWrap) {
+          ldWrap.title = lTitle;
+          ldWrap.setAttribute("aria-label", lTitle);
+          ldWrap.classList.toggle("is-soon", c.ldDays >= 0 && c.ldDays <= 30);
+          ldWrap.classList.toggle("is-done", c.ldDays < 0);
+        }
+      }
     }
     if (CL.pigeon && typeof CL.pigeon.updateBadges === "function") {
       CL.pigeon.updateBadges();
@@ -92,6 +138,12 @@
             <p>Shelves, reviews & recs</p>
             <span class="badge">Open</span>
           </button>
+          <button type="button" class="more-card" data-go="timeline">
+            <span class="emoji">📅</span>
+            <strong>Timeline</strong>
+            <p>Cole, Lauren &amp; together</p>
+            <span class="badge">Open</span>
+          </button>
           <button type="button" class="more-card" data-go="pigeon">
             <span class="emoji">🕊️</span>
             <strong>Carrier Pigeon</strong>
@@ -115,7 +167,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile and track Tech vs A&amp;M win totals, movies, games, notes &amp; Carrier Pigeon.
+            (Firebase). Set names under Profile and track Tech vs A&amp;M win totals, movies, games, notes, Timeline &amp; Carrier Pigeon.
           </p>
         </div>
       </section>

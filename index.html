@@ -33,7 +33,6 @@
         </div>
         <div class="brand-text">
           <strong>CL</strong>
-          <span class="day-counter" id="header-daycount" title="Days since April 11, 2026">—</span>
         </div>
       </a>
       <div class="header-actions">
@@ -47,6 +46,20 @@
         <button type="button" class="icon-btn" id="btn-home" title="Home" aria-label="Go to home">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8.5z"/></svg>
         </button>
+      </div>
+      <div class="header-counts" id="header-counts">
+        <div class="hc" id="hc-anniv" title="Days since April 11, 2026">
+          <span class="hc-label">Since Apr 11</span>
+          <span class="hc-val" id="header-daycount">—</span>
+        </div>
+        <div class="hc" id="hc-break" title="Days until break · December 15, 2026">
+          <span class="hc-label">Until break</span>
+          <span class="hc-val" id="header-break">—</span>
+        </div>
+        <div class="hc" id="hc-ld" title="Days until long distance is potentially over · July 1, 2027">
+          <span class="hc-label">LD over</span>
+          <span class="hc-val" id="header-ld">—</span>
+        </div>
       </div>
     </header>
 
@@ -98,6 +111,7 @@
   <script src="js/sections/notes.js"></script>
   <script src="js/sections/books.js"></script>
   <script src="js/sections/pigeon.js"></script>
+  <script src="js/sections/timeline.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -102,6 +102,11 @@
                 <strong>Books</strong>
                 <span>Book club</span>
               </a>
+              <a href="#timeline" class="quick-card">
+                <span class="emoji">📅</span>
+                <strong>Timeline</strong>
+                <span>Cole, Lauren &amp; us</span>
+              </a>
               <a href="#pigeon" class="quick-card">
                 <span class="emoji">🕊️</span>
                 <strong>Carrier Pigeon</strong>
@@ -141,6 +146,10 @@
               <button type="button" class="card home-action" data-go="pigeon">
                 <strong>Send a pigeon</strong>
                 <p class="card-meta">Write a letter on the farm scroll</p>
+              </button>
+              <button type="button" class="card home-action" data-go="timeline">
+                <strong>Check the timeline</strong>
+                <p class="card-meta">Cole, Lauren, and together — month by month</p>
               </button>
             </div>
           </div>

@@ -2789,3 +2789,204 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Timeline */
+.tl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tl-chip {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.tl-chip.cole,
+.tl-lane-name.cole,
+.tl-chip-card.cole { background: #0a3161; color: #fff; }
+.tl-chip.lauren,
+.tl-lane-name.lauren,
+.tl-chip-card.lauren { background: #b22234; color: #fff; }
+.tl-chip.together,
+.tl-lane-name.together,
+.tl-chip-card.together {
+  background: linear-gradient(135deg, #e2c15a, #c9a227);
+  color: #3a2410;
+}
+
+.tl-gantt {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding-bottom: 8px;
+}
+.tl-gantt-head,
+.tl-lane {
+  display: flex;
+  align-items: stretch;
+  min-width: min-content;
+}
+.tl-lane-name,
+.tl-corner {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: var(--cream);
+  border-right: 1px solid var(--border);
+}
+.tl-corner { background: var(--surface); min-height: 36px; }
+.tl-lane-name { min-height: 40px; }
+.tl-head-track,
+.tl-lane-track {
+  position: relative;
+  height: 40px;
+  flex-shrink: 0;
+}
+.tl-gantt-head .tl-head-track {
+  display: flex;
+  height: 36px;
+}
+.tl-col-h {
+  flex-shrink: 0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 10px;
+  border-right: 1px solid rgba(10, 49, 97, 0.06);
+}
+.tl-col-h.is-now {
+  background: rgba(178, 34, 52, 0.12);
+  color: var(--red-500);
+  font-weight: 800;
+}
+.tl-col-death { color: var(--text-muted); font-style: italic; }
+.tl-block {
+  position: absolute;
+  top: 4px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.15;
+  padding: 4px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  cursor: default;
+}
+.tl-page.is-editing .tl-block { cursor: pointer; }
+.tl-block.cole { background: #0a3161; color: #fff; }
+.tl-block.lauren { background: #b22234; color: #fff; }
+.tl-block.together {
+  background: linear-gradient(135deg, #e2c15a, #c9a227);
+  color: #3a2410;
+}
+.tl-block.is-marker {
+  background: #2b2b2b;
+  color: #f5f0e8;
+}
+
+.tl-months-list { display: flex; flex-direction: column; gap: 10px; }
+.tl-month-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.tl-month-card.is-now {
+  border-color: var(--red-500);
+  box-shadow: 0 0 0 2px rgba(178, 34, 52, 0.15);
+}
+.tl-month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tl-month-head strong { font-size: 0.92rem; }
+.tl-now-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--pink-100);
+  color: var(--red-500);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.tl-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tl-pair.single { grid-template-columns: 1fr; }
+.tl-chip-card {
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-height: 64px;
+}
+.tl-chip-who {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.tl-chip-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.tl-chip-dates {
+  font-size: 0.68rem;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+.tl-chip-card .tl-mini {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: rgba(255,255,255,0.2);
+  color: inherit;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.tl-empty {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 10px 8px;
+  background: var(--cream-warm);
+  border-radius: 12px;
+  min-height: 64px;
+}
+.tl-month-card.together-card {
+  border-color: rgba(201, 162, 39, 0.45);
+}
+.tl-month-card.marker-card {
+  border-color: rgba(20, 24, 42, 0.25);
+}
+.tl-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.tl-check input { width: 18px; height: 18px; }

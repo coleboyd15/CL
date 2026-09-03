@@ -13,11 +13,14 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  height: calc(var(--header-h) + var(--safe-t));
-  padding: var(--safe-t) 16px 0;
+  height: auto;
+  min-height: calc(52px + var(--safe-t));
+  padding: var(--safe-t) 12px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 8px;
   background: rgba(250, 248, 245, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -59,20 +62,53 @@
   line-height: 1;
 }
 
-.brand-text .day-counter,
-#header-daycount {
+.header-counts {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 6px 7px;
+  text-align: center;
+  min-width: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.hc-label {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--navy-500);
-  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1.2;
   white-space: nowrap;
-  max-width: 190px;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
 }
+
+.hc-val {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--navy-500);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc.is-soon .hc-val { color: var(--red-500); }
+.hc.is-done .hc-val { color: var(--text-muted); }
 
 .header-actions {
   display: flex;

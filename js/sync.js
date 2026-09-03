@@ -186,6 +186,7 @@
   function applyRemoteData(remote) {
     if (!remote || typeof remote !== "object") return;
     let pigeonRepush = null;
+    let timelineRepush = null;
     applyingRemote = true;
     try {
       CL.storage.SYNC_KEYS.forEach((k) => {
@@ -207,6 +208,13 @@
               pigeonRepush = val;
             }
           }
+          if (k === "timeline" && val && typeof val === "object" && CL.timeline && typeof CL.timeline.merge === "function") {
+            const incoming = val;
+            val = CL.timeline.merge(CL.storage.get("timeline", null), incoming);
+            if (CL.timeline.shouldRepush && CL.timeline.shouldRepush(incoming, val)) {
+              timelineRepush = val;
+            }
+          }
           CL.storage.set(k, val, { remote: true });
         }
       });
@@ -220,6 +228,9 @@
     }
     if (pigeonRepush) {
       pushKey("pigeon", pigeonRepush);
+    }
+    if (timelineRepush) {
+      pushKey("timeline", timelineRepush);
     }
   }
 
@@ -371,6 +382,7 @@
 
     // Merge: remote wins for shared lists; keep local-only fields on profile
     let pigeonRepush = null;
+    let timelineRepush = null;
     applyingRemote = true;
     try {
       CL.storage.SYNC_KEYS.forEach((k) => {
@@ -391,6 +403,12 @@
           if (CL.pigeon.shouldRepush && CL.pigeon.shouldRepush(remoteData[k], merged)) {
             pigeonRepush = merged;
           }
+        } else if (k === "timeline" && CL.timeline && typeof CL.timeline.merge === "function") {
+          const merged = CL.timeline.merge(CL.storage.get("timeline", null), remoteData[k]);
+          CL.storage.set(k, merged, { remote: true });
+          if (CL.timeline.shouldRepush && CL.timeline.shouldRepush(remoteData[k], merged)) {
+            timelineRepush = merged;
+          }
         } else {
           CL.storage.set(k, remoteData[k], { remote: true });
         }
@@ -406,6 +424,7 @@
       if (remoteData[k] == null) patch[k] = local[k];
     });
     if (pigeonRepush) patch.pigeon = pigeonRepush;
+    if (timelineRepush) patch.timeline = timelineRepush;
     if (Object.keys(patch).length) {
       pushing = true;
       try {

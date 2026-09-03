@@ -37,7 +37,7 @@
   --radius-sm: 10px;
   --radius-full: 999px;
   --nav-h: 68px;
-  --header-h: 56px;
+  --header-h: 96px;
   --max-w: 480px;
   --font: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --safe-b: env(safe-area-inset-bottom, 0px);

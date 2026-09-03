@@ -77,6 +77,36 @@
     );
   }
 
+  const BREAK = new Date(2026, 11, 15); // Dec 15, 2026
+  const LD_OVER = new Date(2027, 6, 1); // Jul 1, 2027
+
+  function daysUntil(target, now) {
+    now = now || new Date();
+    const t = startOfDay(target);
+    const today = startOfDay(now);
+    return Math.round((t.getTime() - today.getTime()) / dayMs);
+  }
+
+  function formatCountdown(n) {
+    if (n > 0) return n + "d";
+    if (n === 0) return "today";
+    return "done";
+  }
+
+  function getCountdowns(now) {
+    now = now || new Date();
+    const anniv = getDayCount(now);
+    const breakDays = daysUntil(BREAK, now);
+    const ldDays = daysUntil(LD_OVER, now);
+    return {
+      anniv,
+      breakDays,
+      ldDays,
+      breakLabel: formatCountdown(breakDays),
+      ldLabel: formatCountdown(ldDays)
+    };
+  }
+
   function headerHtml() {
     const info = getDayCount();
     const compact = formatCompact(info);
@@ -92,6 +122,11 @@
     formatCompact,
     formatLong,
     headerHtml,
-    START
+    getCountdowns,
+    daysUntil,
+    formatCountdown,
+    START,
+    BREAK,
+    LD_OVER
   };
 })(window);
