@@ -47,7 +47,7 @@
     function sparklineSvg(history) {
       const pts = (history || []).slice(-30);
       if (pts.length < 2) {
-        return `<div class="cfb-chart-empty">Trend builds as odds are checked each day.</div>`;
+        return `<div class="cfb-chart-empty">Need two snapshots to draw the line — tap Update after a refresh.</div>`;
       }
       const w = 320;
       const h = 120;
@@ -258,7 +258,13 @@
 
           <div class="section-label">2026 regular-season win totals</div>
           <p class="filter-hint" style="margin-bottom:8px">
-            Source: ${CL.escapeHtml(data.lines.source === "live" ? "Live public odds pages" : "Published consensus")}
+            Source: ${CL.escapeHtml(
+              data.lines.source === "live"
+                ? "Live sportsbook pages"
+                : data.lines.source === "fallback-live"
+                  ? "Latest verified market (scrape retry on Update)"
+                  : "Published consensus"
+            )}
             ${linesAsOfLabel(data) ? " · " + CL.escapeHtml(linesAsOfLabel(data)) : ""}
           </p>
           <div class="cfb-odds-grid section-block">
@@ -280,10 +286,10 @@
             ${
               tab === "market"
                 ? `<p class="review-text" style="font-style:normal;margin:0">
-                    Each team’s <strong>win total</strong> O/U and American odds convert to an expected win total.
-                    We simulate many seasons to estimate who finishes with more wins, then show Kalshi-style
-                    prices in cents (probability × 100). Schedules and records pull from ESPN and refresh on open
-                    (and when you tap Update). Odds history saves one point per day on this device.
+                    Each team’s <strong>win total</strong> O/U and juice convert to expected wins.
+                    We simulate seasons to price who finishes with more wins (Kalshi-style ¢).
+                    Lines refresh when you open this tab and at least daily. Each change is saved
+                    so the trend chart moves. Completed games show final scores and records.
                   </p>`
                 : tab === "tech"
                   ? `<div class="cfb-sched-head">

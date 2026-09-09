@@ -1,9 +1,9 @@
 /* Tech vs A&M 2026 win-total tracker — ESPN schedules/records + odds math */
 (function (global) {
-  // v3: live win totals (OddsShark/VI) + Tech ESPN id 2641
-  const CACHE_KEY = "cfbTracker_v3";
-  const HISTORY_KEY = "cfbOddsHistory";
-  const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // revalidate schedules every 6h
+  // v4: live win totals (VegasInsider/Covers, not stale OddsShark July 16) + Week 1 scores
+  const CACHE_KEY = "cfbTracker_v4";
+  const HISTORY_KEY = "cfbOddsHistory_v4";
+  const CACHE_TTL_MS = 45 * 60 * 1000; // schedules: 45 min
   const DAY_MS = 24 * 60 * 60 * 1000;
 
   const TEAMS = {
@@ -35,39 +35,98 @@
   };
 
   /**
-   * Last-known consensus 2026 regular-season win totals (Jul 2026 books).
-   * Live fetch prefers OddsShark / VegasInsider; this is fallback only.
-   * Tech is NOT 7.5 — market is ~10.5 after 2025 run.
+   * Opening snapshot (FanDuel / OddsShark, Jul 16 2026) — history baseline only.
+   * Never shown as the current market.
    */
-  const DEFAULT_LINES_2026 = {
+  const OPENING_LINES_JUL16 = {
     season: 2026,
     asOf: Date.parse("2026-07-16T12:00:00Z"),
-    source: "consensus-fallback",
+    source: "opening",
+    tech: { line: 10.5, overOdds: -220, underOdds: 176, book: "FanDuel (Jul 16 2026)" },
+    agm: { line: 8.5, overOdds: -106, underOdds: -114, book: "FanDuel (Jul 16 2026)" }
+  };
+
+  /**
+   * Last verified live market if scrape fails (not July 16).
+   * Tech 10.5 over juiced; A&M 8.5.
+   */
+  const FALLBACK_LIVE_LINES = {
+    season: 2026,
+    asOf: Date.parse("2026-09-09T15:00:00Z"),
+    source: "fallback-live",
     tech: {
       line: 10.5,
-      overOdds: -220,
-      underOdds: 176,
-      book: "FanDuel (OddsShark, Jul 16 2026)"
+      overOdds: -200,
+      underOdds: 160,
+      book: "DraftKings / Covers"
     },
     agm: {
       line: 8.5,
-      overOdds: -106,
-      underOdds: -114,
-      book: "FanDuel (OddsShark, Jul 16 2026)"
+      overOdds: 120,
+      underOdds: -145,
+      book: "FanDuel / BetMGM / BetRivers"
     },
-    note: "Fallback lines from published 2026 win totals. Live scrape updates when sources allow."
+    note: "Latest verified market (Tech 10.5 juiced over · A&M 8.5). Live scrape retry on next refresh."
   };
 
+  const DEFAULT_LINES_2026 = FALLBACK_LIVE_LINES;
+
   const WIN_TOTAL_SOURCES = [
-    {
-      id: "oddsshark",
-      label: "OddsShark / FanDuel",
-      url: "https://www.oddsshark.com/ncaaf/college-football-win-totals"
-    },
     {
       id: "vegasinsider",
       label: "VegasInsider",
       url: "https://www.vegasinsider.com/college-football/odds/win-totals/"
+    },
+    {
+      id: "covers-ttu",
+      label: "Covers",
+      url: "https://www.covers.com/ncaaf/texas-tech-red-raiders-win-totals-odds-history-predictions"
+    },
+    {
+      id: "covers-agm",
+      label: "Covers",
+      url: "https://www.covers.com/ncaaf/texas-a-and-m-aggies-win-totals-odds-history-predictions"
+    },
+    {
+      id: "sb3-agm",
+      label: "SportsBetting3 / BetRivers",
+      url: "https://www.sportsbetting3.com/ncaafb/texas-am-aggies-football-betting"
+    },
+    {
+      id: "oddsshark",
+      label: "OddsShark",
+      url: "https://www.oddsshark.com/ncaaf/college-football-win-totals"
+    }
+  ];
+
+  const KNOWN_RESULTS_2026 = [
+    {
+      team: "tech",
+      opponentMatch: /abilene/i,
+      datePrefix: "2026-09-05",
+      result: "W",
+      myScore: 33,
+      oppScore: 10,
+      homeAway: "home",
+      opponent: "Abilene Christian",
+      location: "Galaxy Stadium · Lubbock, TX",
+      venue: "Galaxy Stadium",
+      tv: "FS1",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/2000.png"
+    },
+    {
+      team: "agm",
+      opponentMatch: /missouri\s*state/i,
+      datePrefix: "2026-09-05",
+      result: "W",
+      myScore: 50,
+      oppScore: 0,
+      homeAway: "home",
+      opponent: "Missouri State",
+      location: "Kyle Field · College Station, TX",
+      venue: "Kyle Field",
+      tv: "ESPN",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/2623.png"
     }
   ];
 
@@ -174,13 +233,44 @@
     return Array.isArray(h) ? h : [];
   }
 
+  function seedOpeningHistory() {
+    const openSim = simulateWhoWinsMore(OPENING_LINES_JUL16.tech, OPENING_LINES_JUL16.agm);
+    return {
+      dateKey: "2026-07-16",
+      at: OPENING_LINES_JUL16.asOf,
+      techLine: OPENING_LINES_JUL16.tech.line,
+      agmLine: OPENING_LINES_JUL16.agm.line,
+      techOver: OPENING_LINES_JUL16.tech.overOdds,
+      agmOver: OPENING_LINES_JUL16.agm.overOdds,
+      techCents: openSim.techCents,
+      agmCents: openSim.agmCents,
+      muTech: openSim.muTech,
+      muAgm: openSim.muAgm
+    };
+  }
+
   function pushHistorySnapshot(snapshot) {
+    let hist = getHistory();
+    if (!hist.some((x) => x.dateKey === "2026-07-16")) {
+      hist = [seedOpeningHistory()].concat(hist);
+    }
     const key = dayKey();
-    let hist = getHistory().filter((x) => x.dateKey !== key);
-    hist.push(
-      Object.assign({ dateKey: key, at: Date.now() }, snapshot)
-    );
-    // keep ~90 days
+    const last = hist.filter((x) => x.dateKey !== "2026-07-16").slice(-1)[0];
+    const same =
+      last &&
+      last.dateKey === key &&
+      last.techLine === snapshot.techLine &&
+      last.agmLine === snapshot.agmLine &&
+      last.techOver === snapshot.techOver &&
+      last.agmOver === snapshot.agmOver &&
+      last.techCents === snapshot.techCents &&
+      last.agmCents === snapshot.agmCents;
+    if (same) {
+      CL.storage.set(HISTORY_KEY, hist, { skipSync: true });
+      return hist;
+    }
+    hist = hist.filter((x) => x.dateKey !== key);
+    hist.push(Object.assign({ dateKey: key, at: Date.now() }, snapshot));
     hist = hist.sort((a, b) => String(a.dateKey).localeCompare(String(b.dateKey))).slice(-90);
     CL.storage.set(HISTORY_KEY, hist, { skipSync: true });
     return hist;
@@ -409,10 +499,87 @@
     return n;
   }
 
-  /** Parse free win-total HTML (OddsShark / VegasInsider style tables) */
+  function invertAmerican(a) {
+    let p;
+    if (a < 0) p = Math.abs(a) / (Math.abs(a) + 100);
+    else p = 100 / (a + 100);
+    const q = 1 - p;
+    if (q >= 0.5) return Math.round((-100 * q) / (1 - q));
+    return Math.round((100 * (1 - q)) / q);
+  }
+
+  function quotesInWindow(windowText) {
+    const quotes = [];
+    const re = /o\s*(\d{1,2}(?:\.5)?)\s+([+-]?\d{3,4})/gi;
+    let m;
+    while ((m = re.exec(windowText))) {
+      const line = parseLineToken(m[1]);
+      const over = parseAmericanToken(m[2]);
+      if (line != null && over != null) quotes.push({ line, overOdds: over });
+    }
+    const re2 = /(\d{1,2}\.5)\s+([+-]\d{3,4})\s+([+-]\d{3,4})/g;
+    while ((m = re2.exec(windowText))) {
+      const line = parseLineToken(m[1]);
+      const over = parseAmericanToken(m[2]);
+      const under = parseAmericanToken(m[3]);
+      if (line != null && over != null) quotes.push({ line, overOdds: over, underOdds: under });
+    }
+    const re3 =
+      /(?:O|Over)\s*(\d{1,2}\.5)[^\n]{0,80}?([+-]\d{3,4})[^\n]{0,80}?(?:U|Under)[^\n]{0,40}?([+-]\d{3,4})/gi;
+    while ((m = re3.exec(windowText))) {
+      const line = parseLineToken(m[1]);
+      const over = parseAmericanToken(m[2]);
+      const under = parseAmericanToken(m[3]);
+      if (line != null && over != null) quotes.push({ line, overOdds: over, underOdds: under });
+    }
+    const re4 = /(\d{1,2}\.5)\s+u\s+([+-]?\d{3,4})\s+\1\s+o\s+([+-]?\d{3,4})/gi;
+    while ((m = re4.exec(windowText))) {
+      const line = parseLineToken(m[1]);
+      const under = parseAmericanToken(m[2]);
+      const over = parseAmericanToken(m[3]);
+      if (line != null && over != null) quotes.push({ line, overOdds: over, underOdds: under });
+    }
+    return quotes;
+  }
+
+  function pickBestQuote(quotes) {
+    if (!quotes || !quotes.length) return null;
+    const juiced = quotes.filter((q) => q.overOdds < 0);
+    const pool = juiced.length ? juiced : quotes;
+    const counts = {};
+    pool.forEach((q) => {
+      const k = String(q.line);
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    let line = null;
+    let n = 0;
+    Object.keys(counts).forEach((k) => {
+      if (counts[k] > n) {
+        n = counts[k];
+        line = Number(k);
+      }
+    });
+    const atLine = pool.filter((q) => q.line === line);
+    atLine.sort((a, b) => a.overOdds - b.overOdds);
+    const best = atLine[0];
+    const withUnder = atLine.find((q) => q.underOdds != null) || best;
+    return {
+      line: best.line,
+      overOdds: best.overOdds,
+      underOdds: withUnder.underOdds != null ? withUnder.underOdds : invertAmerican(best.overOdds)
+    };
+  }
+
+  function windowAround(text, nameRe, span) {
+    span = span || 480;
+    const m = text.match(nameRe);
+    if (!m || m.index == null) return "";
+    return text.slice(m.index, m.index + span);
+  }
+
+  /** Parse free win-total HTML (VegasInsider tables, Covers articles, OddsShark) */
   function parseWinTotalsHtml(html, sourceLabel) {
-    if (!html || html.length < 500) return null;
-    // Normalize entities & whitespace for regex
+    if (!html || html.length < 400) return null;
     const text = String(html)
       .replace(/&amp;/g, "&")
       .replace(/&nbsp;/gi, " ")
@@ -423,59 +590,16 @@
       .replace(/[ \t]+/g, " ")
       .replace(/\n+/g, "\n");
 
-    function findTeam(patterns) {
-      for (let i = 0; i < patterns.length; i++) {
-        const re = patterns[i];
-        const m = text.match(re);
-        if (!m) continue;
-        const line = parseLineToken(m[1]);
-        let over = parseAmericanToken(m[2]);
-        let under = parseAmericanToken(m[3]);
-        // OddsShark: OVER then UNDER columns
-        if (line == null || over == null || under == null) continue;
-        // Sanity: over favorites are often large negatives for high lines
-        return { line, overOdds: over, underOdds: under };
-      }
-      return null;
-    }
+    const techWin = windowAround(text, /Texas\s+Tech/i, 520);
+    const agmWin =
+      windowAround(text, /Texas\s+A\s*&\s*M/i, 520) ||
+      windowAround(text, /A\s*&\s*M\s+Aggies/i, 520);
 
-    // Patterns: Team  10.5  -220  +176   or  o10.5 -220
-    const tech = findTeam([
-      /Texas\s+Tech[^\n]{0,40}?(\d{1,2}\.5)\s+([+-]?\d{3,4})\s+([+-]?\d{3,4})/i,
-      /Texas\s+Tech[\s\S]{0,120}?o?(\d{1,2}\.5)[\s\S]{0,40}?([+-]?\d{3,4})[\s\S]{0,40}?([+-]?\d{3,4})/i
-    ]);
-    const agm = findTeam([
-      /Texas\s+A\s*&\s*M[^\n]{0,40}?(\d{1,2}\.5)\s+([+-]?\d{3,4})\s+([+-]?\d{3,4})/i,
-      /Texas\s+A\s*&\s*M[\s\S]{0,120}?o?(\d{1,2}\.5)[\s\S]{0,40}?([+-]?\d{3,4})[\s\S]{0,40}?([+-]?\d{3,4})/i,
-      /A\s*&\s*M\s+Aggies[^\n]{0,40}?(\d{1,2}\.5)\s+([+-]?\d{3,4})\s+([+-]?\d{3,4})/i
-    ]);
+    const techQ = pickBestQuote(quotesInWindow(techWin || text.slice(0, 8000)));
+    const agmQ = pickBestQuote(quotesInWindow(agmWin || ""));
 
-    function invertAmerican(a) {
-      // Fair opposite American odds (no juice)
-      let p;
-      if (a < 0) p = Math.abs(a) / (Math.abs(a) + 100);
-      else p = 100 / (a + 100);
-      const q = 1 - p;
-      if (q >= 0.5) return Math.round((-100 * q) / (1 - q));
-      return Math.round((100 * (1 - q)) / q);
-    }
-
-    // VegasInsider often only exposes over juice in row text as o10.5 -220
-    function findViStyle(nameRe) {
-      const re = new RegExp(
-        nameRe.source + "[\\s\\S]{0,220}?o\\s*(\\d{1,2}\\.5)\\s+([+-]?\\d{3,4})",
-        "i"
-      );
-      const m = text.match(re);
-      if (!m) return null;
-      const line = parseLineToken(m[1]);
-      const over = parseAmericanToken(m[2]);
-      if (line == null || over == null) return null;
-      return { line, overOdds: over, underOdds: invertAmerican(over) };
-    }
-
-    const techFinal = tech || findViStyle(/Texas\s+Tech/);
-    const agmFinal = agm || findViStyle(/Texas\s+A\s*&\s*M/);
+    const techFinal = techQ;
+    const agmFinal = agmQ;
 
     if (!techFinal && !agmFinal) return null;
 
@@ -483,12 +607,8 @@
       season: 2026,
       asOf: Date.now(),
       source: "live",
-      tech: techFinal
-        ? Object.assign({}, techFinal, { book: sourceLabel })
-        : null,
-      agm: agmFinal
-        ? Object.assign({}, agmFinal, { book: sourceLabel })
-        : null,
+      tech: techFinal ? Object.assign({}, techFinal, { book: sourceLabel }) : null,
+      agm: agmFinal ? Object.assign({}, agmFinal, { book: sourceLabel }) : null,
       note: "Live win totals parsed from " + sourceLabel + "."
     };
   }
@@ -524,7 +644,7 @@
   }
 
   /**
-   * Pull 2026 RS win totals from free public pages (OddsShark, VegasInsider).
+   * Pull 2026 RS win totals from public pages (VegasInsider first — OddsShark is often stale).
    * Browser uses CORS proxies when direct fetch is blocked.
    */
   async function fetchWinTotals(season) {
@@ -533,6 +653,12 @@
       const src = WIN_TOTAL_SOURCES[i];
       try {
         const html = await fetchTextViaProxies(src.url);
+        const staleJuly =
+          src.id === "oddsshark" && /July\s+16,\s*2026/i.test(html);
+        if (staleJuly) {
+          console.warn("Skipping stale OddsShark July 16 win totals");
+          continue;
+        }
         const parsed = parseWinTotalsHtml(html, src.label);
         if (parsed && (parsed.tech || parsed.agm)) {
           results.push(parsed);
@@ -544,37 +670,59 @@
 
     if (!results.length) return null;
 
-    // Prefer first complete pair; else merge fields
-    let best = results.find((r) => r.tech && r.agm) || results[0];
-    if (!best.tech || !best.agm) {
-      for (let i = 1; i < results.length; i++) {
-        if (!best.tech && results[i].tech) best.tech = results[i].tech;
-        if (!best.agm && results[i].agm) best.agm = results[i].agm;
+    const techQuotes = results.map((r) => r.tech).filter(Boolean);
+    const agmQuotes = results.map((r) => r.agm).filter(Boolean);
+    const tech = pickBestQuote(
+      techQuotes.map((t) => ({
+        line: t.line,
+        overOdds: t.overOdds,
+        underOdds: t.underOdds
+      }))
+    );
+    const agm = pickBestQuote(
+      agmQuotes.map((t) => ({
+        line: t.line,
+        overOdds: t.overOdds,
+        underOdds: t.underOdds
+      }))
+    );
+    if (!tech || !agm) {
+      let best = results.find((r) => r.tech && r.agm) || results[0];
+      if (!best.tech || !best.agm) {
+        for (let i = 1; i < results.length; i++) {
+          if (!best.tech && results[i].tech) best.tech = results[i].tech;
+          if (!best.agm && results[i].agm) best.agm = results[i].agm;
+        }
       }
-    }
-    if (!best.tech || !best.agm) return null;
-
-    // Never accept clearly wrong Tech lines (e.g. 7.5 leftover seed) if we also see 10.5 elsewhere
-    const techLines = results.map((r) => r.tech && r.tech.line).filter((n) => n != null);
-    if (techLines.length) {
-      const maxTech = Math.max.apply(null, techLines);
-      if (best.tech.line < 9 && maxTech >= 10) {
-        const better = results.find((r) => r.tech && r.tech.line >= 10);
-        if (better) best.tech = better.tech;
-      }
+      if (!best.tech || !best.agm) return null;
+      best.season = season || 2026;
+      best.asOf = Date.now();
+      best.source = "live";
+      return best;
     }
 
-    best.season = season || 2026;
-    best.asOf = Date.now();
-    best.source = "live";
-    return best;
+    const books = [];
+    results.forEach((r) => {
+      if (r.tech && r.tech.book) books.push(r.tech.book);
+      if (r.agm && r.agm.book) books.push(r.agm.book);
+    });
+    const bookLabel = books.filter((b, i) => books.indexOf(b) === i).join(" · ") || "Live books";
+
+    return {
+      season: season || 2026,
+      asOf: Date.now(),
+      source: "live",
+      tech: Object.assign({}, tech, { book: bookLabel }),
+      agm: Object.assign({}, agm, { book: bookLabel }),
+      note: "Live regular-season win totals from public sportsbook pages."
+    };
   }
 
   function mergeLines(live, seed) {
     if (!live || !live.tech || !live.agm) {
       return Object.assign({}, seed, {
         asOf: seed.asOf || Date.now(),
-        source: seed.source || "consensus-fallback"
+        source: seed.source || "fallback-live"
       });
     }
     return {
@@ -587,6 +735,165 @@
     };
   }
 
+  function applyKnownResults(team, teamKey) {
+    if (!team) return team;
+    const games = (team.games || []).slice();
+    KNOWN_RESULTS_2026.filter((k) => k.team === teamKey).forEach((known) => {
+      const idx = games.findIndex((g) => {
+        const d = String(g.date || "").slice(0, 10);
+        return known.opponentMatch.test(g.opponent || "") || d === known.datePrefix;
+      });
+      const patch = {
+        done: true,
+        result: known.result,
+        score: known.myScore + "–" + known.oppScore,
+        myScore: known.myScore,
+        oppScore: known.oppScore,
+        timeLabel: "Final",
+        dateLabel: "Sat, Sep 5, 2026",
+        location: known.location,
+        venue: known.venue,
+        homeAway: known.homeAway,
+        opponent: known.opponent,
+        opponentLogo: known.opponentLogo,
+        tv: known.tv || ""
+      };
+      if (idx >= 0) {
+        games[idx] = Object.assign({}, games[idx], patch, {
+          date: games[idx].date || known.datePrefix + "T23:00:00.000Z"
+        });
+      } else {
+        games.push(
+          Object.assign(
+            {
+              id: "known-" + teamKey + "-" + known.datePrefix,
+              date: known.datePrefix + "T23:00:00.000Z",
+              opponent: known.opponent,
+              opponentLogo: known.opponentLogo
+            },
+            patch
+          )
+        );
+      }
+    });
+    games.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const wins = games.filter((g) => g.done && g.result === "W").length;
+    const losses = games.filter((g) => g.done && g.result === "L").length;
+    team.games = games;
+    if (wins + losses > 0) {
+      team.wins = wins;
+      team.losses = losses;
+      team.record = wins + "-" + losses;
+    }
+    if (!team.logo) {
+      team.logo = "https://a.espncdn.com/i/teamlogos/ncaa/500/" + team.espnId + ".png";
+    }
+    return mergeFallbackSchedule(team, teamKey);
+  }
+
+  const FALLBACK_SCHEDULE = {
+    tech: [
+      { date: "2026-09-12", opponent: "Oregon State", homeAway: "away", location: "Reser Stadium · Corvallis, OR", timeLabel: "6:30 PM CT", logo: "204" },
+      { date: "2026-09-18", opponent: "Houston", homeAway: "home", location: "Galaxy Stadium · Lubbock, TX", timeLabel: "7:00 PM CT", logo: "248" },
+      { date: "2026-09-26", opponent: "Sam Houston", homeAway: "home", location: "Galaxy Stadium · Lubbock, TX", timeLabel: "TBD", logo: "2534" },
+      { date: "2026-10-03", opponent: "Colorado", homeAway: "away", location: "Folsom Field · Boulder, CO", timeLabel: "TBD", logo: "38" },
+      { date: "2026-10-17", opponent: "Arizona State", homeAway: "home", location: "Galaxy Stadium · Lubbock, TX", timeLabel: "TBD", logo: "9" },
+      { date: "2026-10-24", opponent: "Cincinnati", homeAway: "away", location: "Nippert Stadium · Cincinnati, OH", timeLabel: "TBD", logo: "2132" },
+      { date: "2026-10-31", opponent: "Arizona", homeAway: "home", location: "Galaxy Stadium · Lubbock, TX", timeLabel: "TBD", logo: "12" },
+      { date: "2026-11-07", opponent: "West Virginia", homeAway: "home", location: "Galaxy Stadium · Lubbock, TX", timeLabel: "TBD", logo: "277" },
+      { date: "2026-11-14", opponent: "Oklahoma State", homeAway: "away", location: "Boone Pickens Stadium · Stillwater, OK", timeLabel: "TBD", logo: "197" },
+      { date: "2026-11-21", opponent: "Baylor", homeAway: "away", location: "McLane Stadium · Waco, TX", timeLabel: "TBD", logo: "239" },
+      { date: "2026-11-26", opponent: "TCU", homeAway: "home", location: "Galaxy Stadium · Lubbock, TX", timeLabel: "7:00 PM CT", logo: "2628" }
+    ],
+    agm: [
+      { date: "2026-09-12", opponent: "Arizona State", homeAway: "home", location: "Kyle Field · College Station, TX", timeLabel: "11:00 AM CT", tv: "ABC", logo: "9" },
+      { date: "2026-09-19", opponent: "Kentucky", homeAway: "home", location: "Kyle Field · College Station, TX", timeLabel: "2:30 PM CT", logo: "96" },
+      { date: "2026-09-26", opponent: "LSU", homeAway: "away", location: "Tiger Stadium · Baton Rouge, LA", timeLabel: "TBD", logo: "99" },
+      { date: "2026-10-03", opponent: "Arkansas", homeAway: "home", location: "Kyle Field · College Station, TX", timeLabel: "TBD", logo: "8" },
+      { date: "2026-10-10", opponent: "Missouri", homeAway: "away", location: "Faurot Field · Columbia, MO", timeLabel: "TBD", logo: "142" },
+      { date: "2026-10-17", opponent: "The Citadel", homeAway: "home", location: "Kyle Field · College Station, TX", timeLabel: "Noon CT", logo: "2643" },
+      { date: "2026-10-24", opponent: "Alabama", homeAway: "away", location: "Bryant-Denny Stadium · Tuscaloosa, AL", timeLabel: "TBD", logo: "333" },
+      { date: "2026-11-07", opponent: "South Carolina", homeAway: "away", location: "Williams-Brice Stadium · Columbia, SC", timeLabel: "TBD", logo: "2579" },
+      { date: "2026-11-14", opponent: "Tennessee", homeAway: "home", location: "Kyle Field · College Station, TX", timeLabel: "TBD", logo: "2633" },
+      { date: "2026-11-21", opponent: "Oklahoma", homeAway: "away", location: "Gaylord Family Oklahoma Memorial Stadium · Norman, OK", timeLabel: "TBD", logo: "201" },
+      { date: "2026-11-27", opponent: "Texas", homeAway: "home", location: "Kyle Field · College Station, TX", timeLabel: "6:30 PM CT", tv: "ABC", logo: "251" }
+    ]
+  };
+
+  function mergeFallbackSchedule(team, teamKey) {
+    const extra = FALLBACK_SCHEDULE[teamKey] || [];
+    extra.forEach((g) => {
+      const exists = (team.games || []).some((x) => {
+        const d = String(x.date || "").slice(0, 10);
+        return d === g.date || (x.opponent || "").toLowerCase() === g.opponent.toLowerCase();
+      });
+      if (exists) return;
+      const dt = new Date(g.date + "T18:00:00");
+      team.games.push({
+        id: "fb-" + teamKey + "-" + g.date,
+        date: dt.toISOString(),
+        dateLabel: dt.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }),
+        timeLabel: g.timeLabel || "TBD",
+        opponent: g.opponent,
+        opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/" + g.logo + ".png",
+        homeAway: g.homeAway,
+        venue: g.location,
+        location: g.location,
+        done: false,
+        result: "",
+        score: "",
+        tv: g.tv || ""
+      });
+    });
+    team.games.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return team;
+  }
+
+  async function fetchScoreboardDate(ymd) {
+    const urls = [
+      "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=" +
+        ymd +
+        "&limit=300",
+      "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=" +
+        ymd +
+        "&limit=300"
+    ];
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const data = await fetchJson(urls[i]);
+        const events = (data && data.events) || [];
+        if (events.length) return events;
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  function mergeScoreboardIntoTeam(team, events, espnId) {
+    if (!team || !events || !events.length) return team;
+    events.forEach((ev) => {
+      const g = normalizeGame(ev, espnId);
+      if (!g) return;
+      const games = team.games || [];
+      const idx = games.findIndex(
+        (x) =>
+          x.id === g.id ||
+          (String(x.date || "").slice(0, 10) === String(g.date || "").slice(0, 10) &&
+            (x.opponent || "").toLowerCase() === (g.opponent || "").toLowerCase())
+      );
+      if (idx >= 0) {
+        if (g.done) team.games[idx] = Object.assign({}, games[idx], g);
+      } else if (g.done) {
+        team.games = games.concat([g]);
+      }
+    });
+    return team;
+  }
+
   async function loadTracker(options) {
     options = options || {};
     const force = !!options.force;
@@ -594,71 +901,75 @@
     const cached = getCache();
     const now = Date.now();
 
-    if (
+    const scheduleFresh =
       !force &&
       cached &&
       cached.fetchedAt &&
       now - cached.fetchedAt < CACHE_TTL_MS &&
-      cached.season === season
-    ) {
-      return Object.assign({}, cached, { fromCache: true });
-    }
-
-    // Daily odds snapshot: if new day, always recompute history point even if schedule cached
-    const needDailySnap = !cached || cached.dayKey !== dayKey();
+      cached.season === season &&
+      cached.tech &&
+      cached.tech.games &&
+      cached.tech.games.some((g) => g.done && g.result === "W");
 
     let techTeam;
     let agmTeam;
     let scheduleError = "";
 
-    try {
-      [techTeam, agmTeam] = await Promise.all([
-        fetchTeamBundle(TEAMS.tech.espnId, season, TEAMS.tech),
-        fetchTeamBundle(TEAMS.agm.espnId, season, TEAMS.agm)
-      ]);
-      // Guard: never keep a cached Washington / wrong-team payload
-      if (techTeam.displayName && /washington/i.test(techTeam.displayName)) {
-        throw new Error("Texas Tech resolved to the wrong ESPN team");
-      }
-    } catch (err) {
-      console.warn("ESPN schedule fetch failed", err);
-      scheduleError = err.message || "Schedule fetch failed";
-      // Only reuse cache if Tech id is correct (v2)
-      const cacheOk =
-        cached &&
-        cached.tech &&
-        cached.agm &&
-        String(cached.tech.espnId) === String(TEAMS.tech.espnId) &&
-        !/washington/i.test(cached.tech.displayName || "");
-      if (cacheOk) {
-        techTeam = cached.tech;
-        agmTeam = cached.agm;
-      } else {
-        techTeam = emptyTeam(TEAMS.tech);
-        agmTeam = emptyTeam(TEAMS.agm);
+    if (scheduleFresh) {
+      techTeam = cached.tech;
+      agmTeam = cached.agm;
+    } else {
+      try {
+        [techTeam, agmTeam] = await Promise.all([
+          fetchTeamBundle(TEAMS.tech.espnId, season, TEAMS.tech),
+          fetchTeamBundle(TEAMS.agm.espnId, season, TEAMS.agm)
+        ]);
+        if (techTeam.displayName && /washington/i.test(techTeam.displayName)) {
+          throw new Error("Texas Tech resolved to the wrong ESPN team");
+        }
+        try {
+          const sb = await fetchScoreboardDate("20260905");
+          techTeam = mergeScoreboardIntoTeam(techTeam, sb, TEAMS.tech.espnId);
+          agmTeam = mergeScoreboardIntoTeam(agmTeam, sb, TEAMS.agm.espnId);
+        } catch (_) {}
+      } catch (err) {
+        console.warn("ESPN schedule fetch failed", err);
+        scheduleError = err.message || "Schedule fetch failed";
+        const cacheOk =
+          cached &&
+          cached.tech &&
+          cached.agm &&
+          String(cached.tech.espnId) === String(TEAMS.tech.espnId) &&
+          !/washington/i.test(cached.tech.displayName || "");
+        if (cacheOk) {
+          techTeam = cached.tech;
+          agmTeam = cached.agm;
+        } else {
+          techTeam = emptyTeam(TEAMS.tech);
+          agmTeam = emptyTeam(TEAMS.agm);
+        }
       }
     }
 
-    let lines = Object.assign({}, DEFAULT_LINES_2026);
+    techTeam = applyKnownResults(Object.assign({}, TEAMS.tech, techTeam), "tech");
+    agmTeam = applyKnownResults(Object.assign({}, TEAMS.agm, agmTeam), "agm");
+
+    let lines = Object.assign({}, FALLBACK_LIVE_LINES);
     try {
       const liveLines = await fetchWinTotals(season);
-      lines = mergeLines(liveLines, DEFAULT_LINES_2026);
+      lines = mergeLines(liveLines, FALLBACK_LIVE_LINES);
     } catch (err) {
       console.warn("Win totals fetch failed:", err);
-      lines = Object.assign({}, DEFAULT_LINES_2026, {
-        asOf: now,
-        note:
-          "Using last published consensus (Tech 10.5 / A&M 8.5). Live scrape unavailable right now."
-      });
+      lines = Object.assign({}, FALLBACK_LIVE_LINES, { asOf: now });
     }
-    // Hard reject obsolete seed mistakes
     if (lines.tech && Number(lines.tech.line) <= 8) {
-      lines.tech = Object.assign({}, DEFAULT_LINES_2026.tech);
-      lines.note = (lines.note || "") + " Tech line floored to consensus 10.5.";
+      lines.tech = Object.assign({}, FALLBACK_LIVE_LINES.tech);
+      lines.note = (lines.note || "") + " Tech line floored to live consensus 10.5.";
+    }
+    if (lines.source === "opening" || (lines.asOf && lines.asOf === OPENING_LINES_JUL16.asOf)) {
+      lines = Object.assign({}, FALLBACK_LIVE_LINES, { asOf: now });
     }
 
-    // If season has started, blend O/U with current wins for "remaining" narrative
-    // Market who-wins-more still uses full-season win totals
     const sim = simulateWhoWinsMore(lines.tech, lines.agm);
 
     const payload = {
@@ -669,8 +980,8 @@
       scheduleError,
       lines,
       sim,
-      tech: Object.assign({}, TEAMS.tech, techTeam),
-      agm: Object.assign({}, TEAMS.agm, agmTeam),
+      tech: techTeam,
+      agm: agmTeam,
       market: {
         question: "Who will win more regular-season games in 2026?",
         yesLabel: "Texas Tech",
@@ -683,16 +994,16 @@
       }
     };
 
-    if (force || needDailySnap || !cached) {
-      pushHistorySnapshot({
-        techLine: lines.tech.line,
-        agmLine: lines.agm.line,
-        techCents: sim.techCents,
-        agmCents: sim.agmCents,
-        muTech: sim.muTech,
-        muAgm: sim.muAgm
-      });
-    }
+    pushHistorySnapshot({
+      techLine: lines.tech.line,
+      agmLine: lines.agm.line,
+      techOver: lines.tech.overOdds,
+      agmOver: lines.agm.overOdds,
+      techCents: sim.techCents,
+      agmCents: sim.agmCents,
+      muTech: sim.muTech,
+      muAgm: sim.muAgm
+    });
 
     payload.history = getHistory();
     setCache(payload);

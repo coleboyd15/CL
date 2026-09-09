@@ -248,6 +248,9 @@
     if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
       CL.cfb.getDailyEdition({ force: false }).catch(() => {});
     }
+    if (CL.cfb && typeof CL.cfb.loadTracker === "function") {
+      CL.cfb.loadTracker({ season: 2026 }).catch(() => {});
+    }
 
     let syncRefreshTimer = null;
     window.addEventListener("cl-sync-update", (e) => {
