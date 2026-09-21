@@ -2619,7 +2619,60 @@
 
 .toggle-row:last-child { border-bottom: none; }
 
-/* 8-ball */
+/* 8-ball two-option picker */
+.eight-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.eight-vs {
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--red-500);
+  font-size: 0.8rem;
+}
+.eight-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+.eight-opt {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.92rem;
+  word-break: break-word;
+}
+.eight-opt.locked {
+  border-color: #c9a227;
+  background: linear-gradient(180deg, #2a0a0a, #1a0505);
+  color: #f4d35e;
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.45);
+}
+.eight-opt.lost { opacity: 0.35; text-decoration: line-through; }
+.eight-result {
+  width: 100%;
+  text-align: center;
+  margin-top: 8px;
+}
+.eight-result-kicker {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red-500);
+}
+.eight-result-pick {
+  font-family: "Cinzel Decorative", serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--navy-500);
+  margin: 6px 0 12px;
+  line-height: 1.2;
+}
+
 .eight-ball-wrap {
   display: flex;
   flex-direction: column;
@@ -2645,6 +2698,9 @@
 .eight-ball:active { transform: scale(0.98); }
 .eight-ball.shake {
   animation: shake 0.55s ease;
+}
+.eight-ball.shake-hard {
+  animation: shake-hard 1.05s linear;
 }
 
 .eight-window {
@@ -2692,6 +2748,146 @@
   40% { transform: rotate(12deg) translateX(4px); }
   60% { transform: rotate(-8deg); }
   80% { transform: rotate(8deg); }
+}
+@keyframes shake-hard {
+  0%, 100% { transform: rotate(0) translate(0,0); }
+  8% { transform: rotate(-18deg) translate(-10px, 6px); }
+  16% { transform: rotate(22deg) translate(12px, -8px); }
+  24% { transform: rotate(-26deg) translate(-8px, 10px); }
+  32% { transform: rotate(16deg) translate(14px, 4px); }
+  40% { transform: rotate(-20deg) translate(-12px, -6px); }
+  48% { transform: rotate(24deg) translate(8px, 12px); }
+  56% { transform: rotate(-14deg) translate(-14px, -4px); }
+  64% { transform: rotate(18deg) translate(10px, 8px); }
+  72% { transform: rotate(-22deg) translate(-6px, -10px); }
+  80% { transform: rotate(12deg) translate(8px, 6px); }
+  90% { transform: rotate(-8deg) translate(-4px, 2px); }
+}
+
+/* Maiden sting overlay */
+.maiden-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: #050000;
+  overflow: hidden;
+}
+.maiden-frame {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 20%;
+  opacity: 0;
+  transform: scale(1.08);
+}
+.maiden-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: #fff;
+  opacity: 0;
+}
+.maiden-overlay.beat-1 .f1 {
+  opacity: 1;
+  animation: maiden-cam 1.2s linear;
+}
+.maiden-overlay.beat-2 .f1 { opacity: 0; }
+.maiden-overlay.beat-2 .f2 {
+  opacity: 1;
+  animation: maiden-cam-hard 1.6s linear;
+}
+.maiden-overlay.beat-2 .maiden-flash {
+  animation: maiden-flash 0.28s linear;
+}
+.maiden-overlay.beat-3 .f2 { opacity: 0; }
+.maiden-overlay.beat-3 .f3 {
+  opacity: 1;
+  animation: maiden-slam-cam 1.4s cubic-bezier(.15,.8,.2,1) forwards;
+}
+.maiden-overlay.beat-3 .maiden-flash {
+  animation: maiden-flash-red 0.35s linear;
+}
+.maiden-pick {
+  position: absolute;
+  z-index: 6;
+  left: 11%;
+  right: 11%;
+  top: 44%;
+  min-height: 18%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: "Cinzel Decorative", serif;
+  font-weight: 900;
+  font-size: clamp(1.35rem, 7vw, 2.2rem);
+  line-height: 1.15;
+  color: #1a0a00;
+  text-shadow: 0 1px 0 #fff3c4, 0 0 18px rgba(201, 162, 39, 0.55);
+  opacity: 0;
+  transform: scale(4) rotate(-12deg);
+  pointer-events: none;
+  word-break: break-word;
+  padding: 0 8px;
+}
+.maiden-overlay.beat-slam .maiden-pick {
+  animation: maiden-text-slam 0.5s cubic-bezier(.15,1.6,.3,1) forwards;
+}
+.maiden-overlay.beat-out {
+  animation: maiden-fade 0.4s ease forwards;
+}
+
+@keyframes maiden-cam {
+  0% { transform: scale(1.25) translate(-4%, 3%) rotate(-2deg); }
+  20% { transform: scale(1.22) translate(5%, -4%) rotate(3deg); }
+  40% { transform: scale(1.18) translate(-6%, 2%) rotate(-4deg); }
+  60% { transform: scale(1.14) translate(4%, 5%) rotate(2deg); }
+  80% { transform: scale(1.1) translate(-3%, -2%) rotate(-1deg); }
+  100% { transform: scale(1.08) translate(0,0) rotate(0); }
+}
+@keyframes maiden-cam-hard {
+  0% { transform: scale(1.35) translate(-8%, 6%) rotate(-6deg); filter: contrast(1.3) saturate(1.3); }
+  15% { transform: scale(1.3) translate(9%, -5%) rotate(7deg); }
+  30% { transform: scale(1.28) translate(-7%, 8%) rotate(-5deg); }
+  50% { transform: scale(1.2) translate(6%, -3%) rotate(4deg); }
+  75% { transform: scale(1.12) translate(-3%, 2%) rotate(-2deg); }
+  100% { transform: scale(1.08); filter: contrast(1.1); }
+}
+@keyframes maiden-slam-cam {
+  0% { transform: scale(1.45) translateY(8%); }
+  100% { transform: scale(1.05) translateY(0); }
+}
+@keyframes maiden-flash {
+  0% { opacity: 0.95; background: #fff; }
+  40% { opacity: 0.5; background: #c00; }
+  100% { opacity: 0; }
+}
+@keyframes maiden-flash-red {
+  0% { opacity: 0.9; background: #ff2a00; }
+  100% { opacity: 0; }
+}
+@keyframes maiden-text-slam {
+  0% { opacity: 0; transform: scale(4.2) rotate(-14deg) translateY(-20px); }
+  70% { opacity: 1; transform: scale(0.92) rotate(2deg) translateY(4px); }
+  100% { opacity: 1; transform: scale(1) rotate(0) translateY(0); }
+}
+@keyframes maiden-fade {
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eight-ball.shake-hard,
+  .maiden-overlay.beat-1 .f1,
+  .maiden-overlay.beat-2 .f2,
+  .maiden-overlay.beat-3 .f3,
+  .maiden-overlay.beat-slam .maiden-pick {
+    animation: none;
+  }
+  .maiden-overlay.beat-1 .f1,
+  .maiden-overlay.beat-2 .f2,
+  .maiden-overlay.beat-3 .f3 { opacity: 1; }
+  .maiden-overlay.beat-slam .maiden-pick { opacity: 1; transform: none; }
 }
 
 /* Question card */

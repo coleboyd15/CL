@@ -90,7 +90,7 @@
               <a href="#fun" class="quick-card">
                 <span class="emoji">🎱</span>
                 <strong>8-Ball</strong>
-                <span>Yes or no</span>
+                <span>Two options. Shake.</span>
               </a>
               <a href="#notes" class="quick-card">
                 <span class="emoji">📝</span>
@@ -141,7 +141,7 @@
               </button>
               <button type="button" class="card home-action" data-go="fun">
                 <strong>Something playful</strong>
-                <p class="card-meta">Shake the Magic 8-Ball</p>
+                <p class="card-meta">Two options. One gets pulled from the bones.</p>
               </button>
               <button type="button" class="card home-action" data-go="pigeon">
                 <strong>Send a pigeon</strong>

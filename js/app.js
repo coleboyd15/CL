@@ -159,7 +159,7 @@
           <button type="button" class="more-card" data-go="fun">
             <span class="emoji">🎱</span>
             <strong>8-Ball</strong>
-            <p>Classic magic answers</p>
+            <p>Two options. One survives.</p>
             <span class="badge">Open</span>
           </button>
         </div>
