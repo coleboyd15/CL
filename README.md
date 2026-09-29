@@ -1,6 +1,6 @@
 # CL — Couple's Lifestyle App
 
-Mobile-friendly web app: home, CFB, movies, games, notes, books, Carrier Pigeon.
+Mobile-friendly web app: home, movies, games, notes, books, Carrier Pigeon.
 
 **Path:** `Documents\CL` · HTML/CSS/JS · `localStorage` · red / navy / cream  
 
@@ -9,12 +9,11 @@ Mobile-friendly web app: home, CFB, movies, games, notes, books, Carrier Pigeon.
 | Area | Details |
 |------|---------|
 | **Home** | Dashboard, names, day counter, quick links |
-| **TTU·A&M** | 2026 win totals · who-wins-more market · schedules |
 | **Movies** | Watched / ranked wishlist (drag to reorder) · decimal ratings |
-| **Games** | Golf, Darts, Spades, Gin · +/− scores · permanent history (syncs) |
+| **Games** | Golf, Darts, Spades, Gin · +/− scores · history with manual delete (syncs) |
 | **Notes** | Shared rich-text notes (syncs) |
 | **Carrier Pigeon** | Shared farm, named pigeons, Dequanteous, parchment letters, transit (syncs) |
-| **Books** | Shelves · reviews (syncs) |
+| **Books** | Shelves · current-read plan (pages/chapters/weeks) · dual sliders + pace marker (syncs) |
 | **Profile** | Couple Group Firebase sync |
 | **Day counter** | Days since Apr 11, 2026 · `Xd · MY DZ` (month number increases only on the 11th) |
 

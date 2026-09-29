@@ -1,17 +1,15 @@
 /* CL app shell + hash router */
 (function () {
-  const PRIMARY = new Set(["home", "cfb", "movies", "games", "more"]);
+  const PRIMARY = new Set(["home", "books", "movies", "games", "more"]);
 
   const ROUTES = {
     home: { title: "Home", nav: "home", render: () => CL.sections.home.render },
-    cfb: { title: "Tech vs A&M", nav: "cfb", render: () => CL.sections.cfb.render },
-    football: { title: "Tech vs A&M", nav: "cfb", render: () => CL.sections.cfb.render },
     movies: { title: "Movies", nav: "movies", render: () => CL.sections.movies.render },
     games: { title: "Games", nav: "games", render: () => CL.sections.games.render },
     fun: { title: "8-Ball", nav: "more", render: () => CL.sections.fun.render },
     more: { title: "More", nav: "more", render: () => renderMore },
     notes: { title: "Notes", nav: "more", render: () => CL.sections.notes.render },
-    books: { title: "Books", nav: "more", render: () => CL.sections.books.render },
+    books: { title: "Books", nav: "books", render: () => CL.sections.books.render },
     pigeon: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     mail: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     carrier: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
@@ -23,8 +21,8 @@
 
   function currentRoute() {
     const hash = (location.hash || "#home").replace(/^#/, "").split("?")[0].toLowerCase();
-    // Legacy routes
-    if (hash === "food" || hash === "news") return "cfb";
+    // Legacy routes (CFB section removed)
+    if (hash === "cfb" || hash === "football" || hash === "food" || hash === "news") return "home";
     if (hash === "cpa" || hash === "rankings") return "home";
     if (hash === "workout" || hash === "workouts") return "home";
     return ROUTES[hash] ? hash : "home";
@@ -120,12 +118,6 @@
             <p>Names & couple group</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="cfb">
-            <span class="emoji">🏈</span>
-            <strong>Tech vs A&amp;M</strong>
-            <p>2026 win totals · who wins more</p>
-            <span class="badge">Open</span>
-          </button>
           <button type="button" class="more-card" data-go="notes">
             <span class="emoji">📝</span>
             <strong>Notes</strong>
@@ -167,7 +159,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile and track Tech vs A&amp;M win totals, movies, games, notes, Timeline &amp; Carrier Pigeon.
+            (Firebase). Set names under Profile and keep movies, games, books, notes, Timeline &amp; Carrier Pigeon.
           </p>
         </div>
       </section>
@@ -188,8 +180,8 @@
 
     // Normalize legacy hashes
     const rawHash = (location.hash || "").replace(/^#/, "").split("?")[0].toLowerCase();
-    if (rawHash === "food" || rawHash === "news") {
-      location.replace("#cfb");
+    if (rawHash === "cfb" || rawHash === "football" || rawHash === "food" || rawHash === "news") {
+      location.replace("#home");
       return;
     }
     if (rawHash === "workout" || rawHash === "workouts") {
@@ -243,13 +235,6 @@
 
     if (CL.pigeon && typeof CL.pigeon.startBackground === "function") {
       CL.pigeon.startBackground();
-    }
-
-    if (CL.cfb && typeof CL.cfb.getDailyEdition === "function") {
-      CL.cfb.getDailyEdition({ force: false }).catch(() => {});
-    }
-    if (CL.cfb && typeof CL.cfb.loadTracker === "function") {
-      CL.cfb.loadTracker({ season: 2026 }).catch(() => {});
     }
 
     let syncRefreshTimer = null;

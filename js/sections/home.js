@@ -72,11 +72,6 @@
           <div class="section-block">
             <div class="section-label">Quick links</div>
             <div class="quick-grid">
-              <a href="#cfb" class="quick-card">
-                <span class="emoji">🏈</span>
-                <strong>Tech vs A&amp;M</strong>
-                <span>2026 win totals</span>
-              </a>
               <a href="#movies" class="quick-card">
                 <span class="emoji">🎬</span>
                 <strong>Movies</strong>
@@ -123,9 +118,9 @@
           <div class="section-block">
             <div class="section-label">Tonight with ${CL.escapeHtml(label)}</div>
             <div class="stack-sm">
-              <button type="button" class="card home-action" data-go="cfb">
-                <strong>Tech vs A&amp;M tracker</strong>
-                <p class="card-meta">2026 win totals, implied odds &amp; schedules</p>
+              <button type="button" class="card home-action" data-go="books">
+                <strong>Book club</strong>
+                <p class="card-meta">Plan the current read and slide chapters as you go</p>
               </button>
               <button type="button" class="card home-action" data-go="movies">
                 <strong>Movie night?</strong>

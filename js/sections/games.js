@@ -180,6 +180,39 @@
     `;
   }
 
+  function matchesHistoryRecord(h, spec) {
+    if (spec.id && h.id) return h.id === spec.id;
+    return (
+      String(h.type || "") === String(spec.type || "") &&
+      String(h.startedAt || "") === String(spec.startedAt || "") &&
+      String(h.endedAt || "") === String(spec.endedAt || "")
+    );
+  }
+
+  function deleteHistoryRecord(spec) {
+    const data = load();
+    data.history = (data.history || []).filter((h) => !matchesHistoryRecord(h, spec));
+    save(data);
+  }
+
+  function bindHistoryDeletes(root, onDone) {
+    root.querySelectorAll("[data-del-game]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm("Remove this game from history and standings?")) return;
+        deleteHistoryRecord({
+          id: btn.dataset.id || "",
+          type: btn.dataset.type || "",
+          startedAt: btn.dataset.started || "",
+          endedAt: btn.dataset.ended || ""
+        });
+        CL.toast("Game removed");
+        if (typeof onDone === "function") onDone();
+      });
+    });
+  }
+
   function historyListHtml(history, filterType, limit) {
     const max = limit != null ? limit : 12;
     const list = (history || [])
@@ -202,6 +235,12 @@
               <article class="card game-history-card">
                 <div class="row-between">
                   <div class="card-title" style="font-size:0.95rem">${meta.emoji} ${CL.escapeHtml(meta.name)}</div>
+                  <button type="button" class="btn btn-ghost btn-sm btn-del-game"
+                    data-del-game="1"
+                    data-id="${CL.escapeHtml(h.id || "")}"
+                    data-type="${CL.escapeHtml(h.type || "")}"
+                    data-started="${h.startedAt || ""}"
+                    data-ended="${h.endedAt || ""}">Delete</button>
                 </div>
                 <div class="card-meta" style="font-weight:600;color:var(--text)">${CL.escapeHtml(resultLabel)}</div>
                 <div class="card-meta">${CL.escapeHtml(scores)}</div>
@@ -970,15 +1009,17 @@
     root.querySelectorAll(".game-pick-card").forEach((btn) => {
       btn.addEventListener("click", () => paintAll("setup", btn.dataset.type));
     });
+
+    bindHistoryDeletes(root, () => paintAll("hub"));
   }
 
   function renderStats(root, paintAll) {
-    const data = load();
-    const history = data.history || [];
-    const stats = computePlayerStats(history);
     let filterType = "";
 
     function paint() {
+      const data = load();
+      const history = data.history || [];
+      const stats = computePlayerStats(history);
       const filtered = filterType
         ? history.filter((h) => h.type === filterType)
         : history;
@@ -1018,7 +1059,7 @@
                 })
                 .join("")}
             </div>
-            ${historyListHtml(filtered, null, 40)}
+            ${historyListHtml(filtered, null, Math.max(filtered.length, 1))}
           </div>
 
           ${
@@ -1046,6 +1087,8 @@
         CL.toast("History & stats cleared");
         paintAll("stats");
       });
+
+      bindHistoryDeletes(root, () => paintAll("stats"));
     }
 
     paint();
