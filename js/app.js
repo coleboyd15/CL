@@ -13,8 +13,9 @@
     pigeon: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     mail: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     carrier: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
-    timeline: { title: "Timeline", nav: "more", render: () => CL.sections.timeline.render },
-    schedule: { title: "Timeline", nav: "more", render: () => CL.sections.timeline.render },
+    timeline: { title: "Calendar", nav: "more", render: () => CL.sections.timeline.render },
+    schedule: { title: "Calendar", nav: "more", render: () => CL.sections.timeline.render },
+    calendar: { title: "Calendar", nav: "more", render: () => CL.sections.timeline.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -69,9 +70,9 @@
         breakEl.textContent = c.breakLabel;
         const bTitle =
           c.breakDays > 0
-            ? c.breakDays + " days until break (Dec 15, 2026)"
+            ? c.breakDays + " days until break (Dec 19, 2026) · " + c.breakPctLabel + " of the way from Oct 20"
             : c.breakDays === 0
-              ? "Break is today · Dec 15, 2026"
+              ? "Break is today · Dec 19, 2026"
               : "Break date has passed";
         if (breakWrap) {
           breakWrap.title = bTitle;
@@ -79,6 +80,10 @@
           breakWrap.classList.toggle("is-soon", c.breakDays >= 0 && c.breakDays <= 30);
           breakWrap.classList.toggle("is-done", c.breakDays < 0);
         }
+        const breakBar = document.getElementById("header-break-bar");
+        const breakPctEl = document.getElementById("header-break-pct");
+        if (breakBar) breakBar.style.width = c.breakPct + "%";
+        if (breakPctEl) breakPctEl.textContent = c.breakPctLabel + " to break";
       }
       const ldEl = document.getElementById("header-ld");
       const ldWrap = document.getElementById("hc-ld");
@@ -86,9 +91,9 @@
         ldEl.textContent = c.ldLabel;
         const lTitle =
           c.ldDays > 0
-            ? c.ldDays + " days until long distance is potentially over (Jul 1, 2027)"
+            ? c.ldDays + " days until long distance is potentially over (Jul 25, 2027) · " + c.ldPctLabel + " from Apr 11"
             : c.ldDays === 0
-              ? "Long distance is potentially over today · Jul 1, 2027"
+              ? "Long distance is potentially over today · Jul 25, 2027"
               : "That date has passed";
         if (ldWrap) {
           ldWrap.title = lTitle;
@@ -96,6 +101,10 @@
           ldWrap.classList.toggle("is-soon", c.ldDays >= 0 && c.ldDays <= 30);
           ldWrap.classList.toggle("is-done", c.ldDays < 0);
         }
+        const ldBar = document.getElementById("header-ld-bar");
+        const ldPctEl = document.getElementById("header-ld-pct");
+        if (ldBar) ldBar.style.width = c.ldPct + "%";
+        if (ldPctEl) ldPctEl.textContent = c.ldPctLabel + " to Jul 25";
       }
     }
     if (CL.pigeon && typeof CL.pigeon.updateBadges === "function") {
@@ -132,7 +141,7 @@
           </button>
           <button type="button" class="more-card" data-go="timeline">
             <span class="emoji">📅</span>
-            <strong>Timeline</strong>
+            <strong>Calendar</strong>
             <p>Cole, Lauren &amp; together</p>
             <span class="badge">Open</span>
           </button>
@@ -159,7 +168,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile and keep movies, games, books, notes, Timeline &amp; Carrier Pigeon.
+            (Firebase). Set names under Profile and keep movies, games, books, notes, Calendar &amp; Carrier Pigeon.
           </p>
         </div>
       </section>

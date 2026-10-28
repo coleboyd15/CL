@@ -14,6 +14,7 @@
     "notes",
     "pigeon",
     "timeline",
+    "calendar",
     "eightball",
     "profile"
   ];

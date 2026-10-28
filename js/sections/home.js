@@ -99,7 +99,7 @@
               </a>
               <a href="#timeline" class="quick-card">
                 <span class="emoji">📅</span>
-                <strong>Timeline</strong>
+                <strong>Calendar</strong>
                 <span>Cole, Lauren &amp; us</span>
               </a>
               <a href="#pigeon" class="quick-card">
@@ -143,8 +143,8 @@
                 <p class="card-meta">Write a letter on the farm scroll</p>
               </button>
               <button type="button" class="card home-action" data-go="timeline">
-                <strong>Check the timeline</strong>
-                <p class="card-meta">Cole, Lauren, and together — month by month</p>
+                <strong>Check the calendar</strong>
+                <p class="card-meta">Shared schedule — day, week, or month</p>
               </button>
             </div>
           </div>

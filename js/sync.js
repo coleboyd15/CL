@@ -187,6 +187,7 @@
     if (!remote || typeof remote !== "object") return;
     let pigeonRepush = null;
     let timelineRepush = null;
+    let calendarRepush = null;
     applyingRemote = true;
     try {
       CL.storage.SYNC_KEYS.forEach((k) => {
@@ -231,6 +232,9 @@
     }
     if (timelineRepush) {
       pushKey("timeline", timelineRepush);
+    }
+    if (calendarRepush) {
+      pushKey("calendar", calendarRepush);
     }
   }
 
@@ -383,6 +387,7 @@
     // Merge: remote wins for shared lists; keep local-only fields on profile
     let pigeonRepush = null;
     let timelineRepush = null;
+    let calendarRepush = null;
     applyingRemote = true;
     try {
       CL.storage.SYNC_KEYS.forEach((k) => {
@@ -409,6 +414,12 @@
           if (CL.timeline.shouldRepush && CL.timeline.shouldRepush(remoteData[k], merged)) {
             timelineRepush = merged;
           }
+        } else if (k === "calendar" && CL.calendar && typeof CL.calendar.merge === "function") {
+          const merged = CL.calendar.merge(CL.storage.get("calendar", null), remoteData[k]);
+          CL.storage.set(k, merged, { remote: true });
+          if (CL.calendar.shouldRepush && CL.calendar.shouldRepush(remoteData[k], merged)) {
+            calendarRepush = merged;
+          }
         } else {
           CL.storage.set(k, remoteData[k], { remote: true });
         }
@@ -425,6 +436,7 @@
     });
     if (pigeonRepush) patch.pigeon = pigeonRepush;
     if (timelineRepush) patch.timeline = timelineRepush;
+    if (calendarRepush) patch.calendar = calendarRepush;
     if (Object.keys(patch).length) {
       pushing = true;
       try {

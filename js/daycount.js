@@ -77,8 +77,10 @@
     );
   }
 
-  const BREAK = new Date(2026, 11, 15); // Dec 15, 2026
-  const LD_OVER = new Date(2027, 6, 1); // Jul 1, 2027
+  const BREAK = new Date(2026, 11, 19); // Dec 19, 2026
+  const BREAK_SCALE_START = new Date(2026, 9, 20); // Oct 20, 2026
+  const LD_OVER = new Date(2027, 6, 25); // Jul 25, 2027
+  const LD_SCALE_START = new Date(2026, 3, 11); // Apr 11, 2026
 
   function daysUntil(target, now) {
     now = now || new Date();
@@ -93,17 +95,33 @@
     return "done";
   }
 
+  function percentBetween(start, end, now) {
+    now = now || new Date();
+    const s = startOfDay(start).getTime();
+    const e = startOfDay(end).getTime();
+    const t = startOfDay(now).getTime();
+    if (e <= s) return t >= e ? 100 : 0;
+    const pct = ((t - s) / (e - s)) * 100;
+    return Math.max(0, Math.min(100, pct));
+  }
+
   function getCountdowns(now) {
     now = now || new Date();
     const anniv = getDayCount(now);
     const breakDays = daysUntil(BREAK, now);
     const ldDays = daysUntil(LD_OVER, now);
+    const breakPct = percentBetween(BREAK_SCALE_START, BREAK, now);
+    const ldPct = percentBetween(LD_SCALE_START, LD_OVER, now);
     return {
       anniv,
       breakDays,
       ldDays,
+      breakPct,
+      ldPct,
       breakLabel: formatCountdown(breakDays),
-      ldLabel: formatCountdown(ldDays)
+      ldLabel: formatCountdown(ldDays),
+      breakPctLabel: Math.round(breakPct) + "%",
+      ldPctLabel: Math.round(ldPct) + "%"
     };
   }
 
@@ -125,8 +143,11 @@
     getCountdowns,
     daysUntil,
     formatCountdown,
+    percentBetween,
     START,
     BREAK,
-    LD_OVER
+    BREAK_SCALE_START,
+    LD_OVER,
+    LD_SCALE_START
   };
 })(window);
