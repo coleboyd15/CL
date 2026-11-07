@@ -97,10 +97,10 @@
                 <strong>Books</strong>
                 <span>Book club</span>
               </a>
-              <a href="#timeline" class="quick-card">
-                <span class="emoji">📅</span>
-                <strong>Calendar</strong>
-                <span>Cole, Lauren &amp; us</span>
+              <a href="#scenarios" class="quick-card">
+                <span class="emoji">🚀</span>
+                <strong>Life scenarios</strong>
+                <span>Futures of awesomeness</span>
               </a>
               <a href="#pigeon" class="quick-card">
                 <span class="emoji">🕊️</span>
@@ -142,9 +142,9 @@
                 <strong>Send a pigeon</strong>
                 <p class="card-meta">Write a letter on the farm scroll</p>
               </button>
-              <button type="button" class="card home-action" data-go="timeline">
-                <strong>Check the calendar</strong>
-                <p class="card-meta">Shared schedule — day, week, or month</p>
+              <button type="button" class="card home-action" data-go="scenarios">
+                <strong>Life scenarios of awesomeness</strong>
+                <p class="card-meta">Three futures — kids, pilot path, Lauren's world</p>
               </button>
             </div>
           </div>

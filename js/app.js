@@ -13,9 +13,12 @@
     pigeon: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     mail: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
     carrier: { title: "Carrier Pigeon", nav: "more", render: () => CL.sections.pigeon.render },
-    timeline: { title: "Calendar", nav: "more", render: () => CL.sections.timeline.render },
-    schedule: { title: "Calendar", nav: "more", render: () => CL.sections.timeline.render },
-    calendar: { title: "Calendar", nav: "more", render: () => CL.sections.timeline.render },
+    scenarios: { title: "Life scenarios", nav: "more", render: () => CL.sections.scenarios.render },
+    scenario: { title: "Life scenarios", nav: "more", render: () => CL.sections.scenarios.render },
+    life: { title: "Life scenarios", nav: "more", render: () => CL.sections.scenarios.render },
+    timeline: { title: "Life scenarios", nav: "more", render: () => CL.sections.scenarios.render },
+    schedule: { title: "Life scenarios", nav: "more", render: () => CL.sections.scenarios.render },
+    calendar: { title: "Life scenarios", nav: "more", render: () => CL.sections.scenarios.render },
     profile: { title: "Profile", nav: "more", render: () => CL.sections.profile.render },
     settings: { title: "Profile", nav: "more", render: () => CL.sections.profile.render }
   };
@@ -139,10 +142,10 @@
             <p>Shelves, reviews & recs</p>
             <span class="badge">Open</span>
           </button>
-          <button type="button" class="more-card" data-go="timeline">
-            <span class="emoji">📅</span>
-            <strong>Calendar</strong>
-            <p>Cole, Lauren &amp; together</p>
+          <button type="button" class="more-card" data-go="scenarios">
+            <span class="emoji">🚀</span>
+            <strong>Life scenarios of awesomeness</strong>
+            <p>Pick a future · kids · pilot path</p>
             <span class="badge">Open</span>
           </button>
           <button type="button" class="more-card" data-go="pigeon">
@@ -168,7 +171,7 @@
           <div class="card-title">About CL</div>
           <p class="card-meta" style="margin-top:6px">
             Your private couple app. Data lives on this device and can sync via a Couple Group
-            (Firebase). Set names under Profile and keep movies, games, books, notes, Calendar &amp; Carrier Pigeon.
+            (Firebase). Set names under Profile and keep movies, games, books, notes &amp; Carrier Pigeon.
           </p>
         </div>
       </section>
