@@ -18,6 +18,37 @@
     return a === b ? a : a + " → " + b;
   }
 
+  /**
+   * Merge A–B–A patterns: same activity on both sides of an interrupting event
+   * stays one continuous block; the middle event is nested inside it.
+   * Chains like A–B–A–C–A become one A with B and C nested.
+   */
+  function mergeOverlaps(spans) {
+    const out = [];
+    let i = 0;
+    while (i < spans.length) {
+      const cur = {
+        label: spans[i].label,
+        start: spans[i].start,
+        end: spans[i].end,
+        nested: []
+      };
+      let j = i + 1;
+      while (j + 1 < spans.length && spans[j + 1].label === cur.label) {
+        cur.nested.push({
+          label: spans[j].label,
+          start: spans[j].start,
+          end: spans[j].end
+        });
+        cur.end = spans[j + 1].end;
+        j += 2;
+      }
+      out.push(cur);
+      i = j > i + 1 ? j : i + 1;
+    }
+    return out;
+  }
+
   const SCENARIOS = [
     {
       id: "awesome",
@@ -161,6 +192,8 @@
   }
 
   function renderDetail(root, scenario) {
+    const displaySpans = mergeOverlaps(scenario.spans);
+    let kidCount = 0;
     const milestones = scenario.spans.filter((s) =>
       ["Engagement", "Married", "Kid"].includes(s.label) ||
       s.label.startsWith("Pilot")
@@ -190,18 +223,35 @@
 
         <h2 class="section-label">Timeline</h2>
         <div class="sc-timeline" role="list">
-          ${scenario.spans.map((span, idx) => {
+          ${displaySpans.map((span) => {
             const meta = EVENT_META[span.label] || { color: "#94a3b8", emoji: "•", short: span.label, place: "" };
             const isKid = span.label === "Kid";
-            const isBig = isKid || span.label === "Engagement" || span.label === "Married";
+            if (isKid) kidCount += 1;
+            const isBig = isKid || span.label === "Engagement" || span.label === "Married" || (span.nested && span.nested.length);
+            const nestedHtml = (span.nested || []).map((n) => {
+              const nm = EVENT_META[n.label] || { color: "#94a3b8", emoji: "•", short: n.label };
+              const nKid = n.label === "Kid";
+              if (nKid) kidCount += 1;
+              return `
+                <div class="sc-nested" style="--sc-nested:${nm.color}">
+                  <span class="sc-nested-emoji">${nm.emoji}</span>
+                  <div>
+                    <div class="sc-nested-what">${CL.escapeHtml(nm.short)}</div>
+                    <div class="sc-nested-when">${CL.escapeHtml(spanLabel(n))}</div>
+                    ${nKid ? `<div class="sc-kid-tag">Kid #${kidCount}</div>` : ""}
+                  </div>
+                </div>
+              `;
+            }).join("");
             return `
-              <div class="sc-item ${isBig ? "is-big" : ""}" role="listitem" style="--sc-color:${meta.color}">
+              <div class="sc-item ${isBig ? "is-big" : ""} ${span.nested && span.nested.length ? "has-nested" : ""}" role="listitem" style="--sc-color:${meta.color}">
                 <div class="sc-rail"><span class="sc-dot">${meta.emoji}</span></div>
                 <div class="sc-body">
                   <div class="sc-when">${CL.escapeHtml(spanLabel(span))}</div>
                   <div class="sc-what">${CL.escapeHtml(meta.short)}</div>
                   ${meta.place ? `<div class="sc-where">${CL.escapeHtml(meta.place)}</div>` : ""}
-                  ${isKid ? `<div class="sc-kid-tag">Kid #${scenario.spans.filter((x, i) => i <= idx && x.label === "Kid").length}</div>` : ""}
+                  ${isKid ? `<div class="sc-kid-tag">Kid #${kidCount}</div>` : ""}
+                  ${nestedHtml ? `<div class="sc-nested-list">${nestedHtml}</div>` : ""}
                 </div>
               </div>
             `;

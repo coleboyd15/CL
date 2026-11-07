@@ -3723,3 +3723,38 @@
   font-size: 13px;
   color: #0f172a;
 }
+
+/* Nested events inside continuous activity blocks */
+.sc-item.has-nested .sc-body {
+  padding-bottom: 10px;
+}
+.sc-nested-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sc-nested {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--sc-nested) 12%, #fff);
+  border: 1px solid color-mix(in srgb, var(--sc-nested) 35%, #e2e8f0);
+  border-left: 3px solid var(--sc-nested);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.sc-nested-emoji {
+  font-size: 16px;
+  line-height: 1.2;
+}
+.sc-nested-what {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.sc-nested-when {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
