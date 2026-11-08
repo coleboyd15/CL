@@ -18,46 +18,15 @@
     return a === b ? a : a + " → " + b;
   }
 
-  /**
-   * Merge A–B–A patterns: same activity on both sides of an interrupting event
-   * stays one continuous block; the middle event is nested inside it.
-   * Chains like A–B–A–C–A become one A with B and C nested.
-   */
-  function mergeOverlaps(spans) {
-    const out = [];
-    let i = 0;
-    while (i < spans.length) {
-      const cur = {
-        label: spans[i].label,
-        start: spans[i].start,
-        end: spans[i].end,
-        nested: []
-      };
-      let j = i + 1;
-      while (j + 1 < spans.length && spans[j + 1].label === cur.label) {
-        cur.nested.push({
-          label: spans[j].label,
-          start: spans[j].start,
-          end: spans[j].end
-        });
-        cur.end = spans[j + 1].end;
-        j += 2;
-      }
-      out.push(cur);
-      i = j > i + 1 ? j : i + 1;
-    }
-    return out;
-  }
-
   const SCENARIOS = [
     {
       id: "awesome",
       title: "Potentially stupid but infinitely awesome",
-      tagline: "Max out existence. Double the replacement rate.",
+      tagline: "Lots of mullets",
       tone: "bold",
       kids: 4,
       lastKidYear: 2033,
-      pros: "4 mullet kids · engaged when done with lease · maxing out existence · bold",
+      pros: "4 mullet kids · engaged when done with lease · lots of mullets · bold",
       cons: "Probably stressful at times",
       spans: [
         { label: "Pilot training Dothan AL", start: [2027, 0], end: [2027, 4] },
@@ -80,7 +49,7 @@
     {
       id: "practical",
       title: "Practical but definitely less awesome",
-      tagline: "Still bold — just not as loud about it.",
+      tagline: "Medium number of mullet kids, a little more balance",
       tone: "mid",
       kids: 3,
       lastKidYear: 2033,
@@ -153,11 +122,6 @@
         <h1 class="page-title">Life scenarios of awesomeness</h1>
         <p class="page-sub">Pick a future. Scroll the path. Count the mullets.</p>
 
-        <figure class="sc-hero">
-          <img src="assets/scenarios/elders.jpg" alt="Cole and Lauren — future us" />
-          <figcaption>Future Cole &amp; Lauren energy</figcaption>
-        </figure>
-
         <div class="sc-legend">
           <span><i style="background:#86efac"></i> Pilot · Dothan</span>
           <span><i style="background:#f97316"></i> Pilot · ABQ</span>
@@ -192,7 +156,6 @@
   }
 
   function renderDetail(root, scenario) {
-    const displaySpans = mergeOverlaps(scenario.spans);
     let kidCount = 0;
     const milestones = scenario.spans.filter((s) =>
       ["Engagement", "Married", "Kid"].includes(s.label) ||
@@ -223,35 +186,19 @@
 
         <h2 class="section-label">Timeline</h2>
         <div class="sc-timeline" role="list">
-          ${displaySpans.map((span) => {
+          ${scenario.spans.map((span) => {
             const meta = EVENT_META[span.label] || { color: "#94a3b8", emoji: "•", short: span.label, place: "" };
             const isKid = span.label === "Kid";
             if (isKid) kidCount += 1;
-            const isBig = isKid || span.label === "Engagement" || span.label === "Married" || (span.nested && span.nested.length);
-            const nestedHtml = (span.nested || []).map((n) => {
-              const nm = EVENT_META[n.label] || { color: "#94a3b8", emoji: "•", short: n.label };
-              const nKid = n.label === "Kid";
-              if (nKid) kidCount += 1;
-              return `
-                <div class="sc-nested" style="--sc-nested:${nm.color}">
-                  <span class="sc-nested-emoji">${nm.emoji}</span>
-                  <div>
-                    <div class="sc-nested-what">${CL.escapeHtml(nm.short)}</div>
-                    <div class="sc-nested-when">${CL.escapeHtml(spanLabel(n))}</div>
-                    ${nKid ? `<div class="sc-kid-tag">Kid #${kidCount}</div>` : ""}
-                  </div>
-                </div>
-              `;
-            }).join("");
+            const isBig = isKid || span.label === "Engagement" || span.label === "Married";
             return `
-              <div class="sc-item ${isBig ? "is-big" : ""} ${span.nested && span.nested.length ? "has-nested" : ""}" role="listitem" style="--sc-color:${meta.color}">
+              <div class="sc-item ${isBig ? "is-big" : ""}" role="listitem" style="--sc-color:${meta.color}">
                 <div class="sc-rail"><span class="sc-dot">${meta.emoji}</span></div>
                 <div class="sc-body">
                   <div class="sc-when">${CL.escapeHtml(spanLabel(span))}</div>
                   <div class="sc-what">${CL.escapeHtml(meta.short)}</div>
                   ${meta.place ? `<div class="sc-where">${CL.escapeHtml(meta.place)}</div>` : ""}
                   ${isKid ? `<div class="sc-kid-tag">Kid #${kidCount}</div>` : ""}
-                  ${nestedHtml ? `<div class="sc-nested-list">${nestedHtml}</div>` : ""}
                 </div>
               </div>
             `;
